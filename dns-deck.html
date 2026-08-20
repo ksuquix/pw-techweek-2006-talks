@@ -1,0 +1,746 @@
+<title>DNS in Depth: Simple Until It Isn't</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#eef1ef;
+  --surface:#ffffff;
+  --surface-2:#e2e7e4;
+  --ink:#161c1a;
+  --muted:#5c6b66;
+  --line:#c7d0cb;
+  --accent:#1f7a6c;
+  --accent-ink:#ffffff;
+  --accent-2:#b9631f;
+  --accent-2-ink:#ffffff;
+  --danger:#a63a3a;
+  --danger-bg:#f6e4e0;
+  --good-bg:#e2f0e9;
+  --shadow: rgba(20,30,26,0.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11151a;
+    --surface:#171d23;
+    --surface-2:#1f2830;
+    --ink:#e7ede9;
+    --muted:#93a19b;
+    --line:#2a343c;
+    --accent:#5fc9b3;
+    --accent-ink:#0b1512;
+    --accent-2:#e0a15c;
+    --accent-2-ink:#231402;
+    --danger:#e28a83;
+    --danger-bg:#33201f;
+    --good-bg:#1b2e28;
+    --shadow: rgba(0,0,0,0.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11151a;
+  --surface:#171d23;
+  --surface-2:#1f2830;
+  --ink:#e7ede9;
+  --muted:#93a19b;
+  --line:#2a343c;
+  --accent:#5fc9b3;
+  --accent-ink:#0b1512;
+  --accent-2:#e0a15c;
+  --accent-2-ink:#231402;
+  --danger:#e28a83;
+  --danger-bg:#33201f;
+  --good-bg:#1b2e28;
+  --shadow: rgba(0,0,0,0.4);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:28px 16px 90px;
+}
+h1,h2,h3{font-family:"Manrope", ui-sans-serif, system-ui, sans-serif; text-wrap:balance; margin:0;}
+code, .mono, .rec-val, kbd{font-family:"IBM Plex Mono", ui-monospace, monospace;}
+.deck{
+  width:100%;
+  max-width:920px;
+}
+.chrome{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  margin-bottom:14px;
+  color:var(--muted);
+  font-size:0.78rem;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+}
+.chrome .brand{color:var(--accent); font-weight:600;}
+.slide{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:44px 48px;
+  min-height:520px;
+  box-shadow:0 12px 30px var(--shadow);
+  display:none;
+  flex-direction:column;
+  gap:18px;
+  position:relative;
+  overflow:hidden;
+}
+.slide.active{display:flex;}
+.eyebrow{
+  font-size:0.72rem;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--accent);
+  font-weight:600;
+}
+.slide h2{font-size:1.9rem; font-weight:800; line-height:1.15;}
+.sub{color:var(--muted); font-size:1.02rem; max-width:65ch; line-height:1.55;}
+.body{flex:1; display:flex; flex-direction:column; gap:16px; justify-content:center;}
+.row{display:flex; gap:16px; flex-wrap:wrap;}
+.col{flex:1; min-width:220px;}
+
+/* record / terminal cards */
+.panel{
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:16px 18px;
+}
+.panel-title{font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:8px; font-weight:600;}
+.term{
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:14px 16px;
+  font-size:0.92rem;
+  overflow-x:auto;
+}
+.term .line{white-space:pre; line-height:1.6;}
+.term .prompt{color:var(--accent-2);}
+.term .out{color:var(--ink);}
+.term .comment{color:var(--muted);}
+
+table.records{width:100%; border-collapse:collapse; font-size:0.92rem;}
+table.records th, table.records td{
+  text-align:left; padding:7px 10px; border-bottom:1px solid var(--line);
+  font-family:"IBM Plex Mono", ui-monospace, monospace;
+}
+table.records th{font-family:"IBM Plex Sans"; color:var(--muted); text-transform:uppercase; font-size:0.68rem; letter-spacing:0.06em; font-weight:600;}
+
+/* packet path */
+.path{
+  display:flex; align-items:center; gap:0; flex-wrap:wrap; margin:6px 0;
+}
+.node{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+  padding:8px 12px; font-size:0.82rem; font-weight:600; white-space:nowrap;
+}
+.node.hot{border-color:var(--accent); color:var(--accent);}
+.node.warn{border-color:var(--danger); color:var(--danger);}
+.arrow{color:var(--muted); padding:0 8px; font-size:1rem;}
+
+/* question / reveal */
+.ask{
+  border:1.5px dashed var(--accent-2);
+  border-radius:10px;
+  padding:16px 18px;
+  background: color-mix(in srgb, var(--accent-2) 8%, transparent);
+}
+.ask .q-label{font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent-2); font-weight:700; margin-bottom:6px;}
+.ask .q-text{font-size:1.05rem; font-weight:600; margin-bottom:10px;}
+.reveal-btn{
+  background:var(--accent-2); color:var(--accent-2-ink); border:none; border-radius:7px;
+  padding:8px 14px; font-size:0.85rem; font-weight:700; cursor:pointer; font-family:inherit;
+}
+.reveal-btn:hover{filter:brightness(1.06);}
+.answer{
+  margin-top:12px; padding-top:12px; border-top:1px solid var(--line);
+  display:none; font-size:0.95rem; line-height:1.55; color:var(--ink);
+}
+.answer.shown{display:block;}
+.tag{
+  display:inline-block; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;
+  padding:2px 8px; border-radius:20px; font-weight:700; margin-right:6px;
+}
+.tag.beginner{background:var(--good-bg); color:var(--accent);}
+.tag.deep{background:var(--danger-bg); color:var(--danger);}
+.callout{
+  border-left:3px solid var(--accent); padding:10px 14px; background:var(--surface-2); border-radius:0 8px 8px 0;
+  font-size:0.9rem; color:var(--muted);
+}
+.callout.warn{border-left-color:var(--danger); }
+.callout b{color:var(--ink);}
+
+.egg{
+  border:1px dotted var(--line);
+  border-radius:10px;
+  padding:12px 16px;
+  font-size:0.88rem;
+  color:var(--muted);
+  background:transparent;
+}
+.egg-label{
+  font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em;
+  color:var(--muted); font-weight:700; margin-bottom:6px;
+}
+.egg b{color:var(--ink);}
+
+/* nav */
+.navbar{
+  position:fixed; bottom:0; left:0; right:0;
+  display:flex; justify-content:center; align-items:center; gap:14px;
+  padding:14px 0; background:linear-gradient(to top, var(--bg) 60%, transparent);
+}
+.navbtn{
+  background:var(--surface); border:1px solid var(--line); color:var(--ink);
+  border-radius:8px; padding:8px 16px; font-size:0.85rem; font-weight:600; cursor:pointer;
+  font-family:"IBM Plex Sans";
+}
+.navbtn:hover{border-color:var(--accent); color:var(--accent);}
+.navbtn:disabled{opacity:0.35; cursor:default;}
+.dots{display:flex; gap:6px;}
+.dot{width:7px; height:7px; border-radius:50%; background:var(--line); cursor:pointer;}
+.dot.active{background:var(--accent); width:20px; border-radius:4px;}
+.counter{font-family:"IBM Plex Mono"; font-size:0.8rem; color:var(--muted); min-width:52px; text-align:center;}
+
+.title-slide{align-items:flex-start; justify-content:center;}
+.title-slide h1{font-size:2.8rem; font-weight:800; line-height:1.05;}
+.title-slide .sub{font-size:1.15rem;}
+.title-list{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}
+.title-list button{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:20px;
+  padding:5px 12px; font-size:0.78rem; color:var(--muted); font-family:"IBM Plex Mono";
+  cursor:pointer; transition:border-color .15s, color .15s;
+}
+.title-list button:hover, .title-list button:focus-visible{
+  border-color:var(--accent); color:var(--accent); outline:none;
+}
+.zone-diagram{font-family:"IBM Plex Mono"; font-size:1rem; line-height:2.1;}
+.indent1{padding-left:1.4em;}
+.indent2{padding-left:2.8em;}
+.zk{color:var(--accent-2);}
+.zv{color:var(--muted);}
+
+kbd{background:var(--surface-2); border:1px solid var(--line); border-radius:5px; padding:1px 6px; font-size:0.78rem;}
+@media (prefers-reduced-motion: no-preference){
+  .slide.active{animation:rise .28s ease;}
+}
+@keyframes rise{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+</style>
+
+<div class="deck">
+  <div class="chrome"><span class="brand">DNS in Depth: Simple Until It Isn't</span><span id="slideLabel"></span></div>
+
+  <!-- 1 TITLE -->
+  <section class="slide active title-slide">
+    <div class="eyebrow">Tech Week 2026 - Don Eisele, Platform Engineering</div>
+    <h1>DNS in Depth<br>Simple Until It Isn't</h1>
+    <p class="sub">From "what happens when I type a hostname" to why Zscaler seems to know things it shouldn't. Beginner-friendly, with detours for anyone who wants the operator-level view.</p>
+    <div class="title-list">
+      <button type="button" onclick="goTo(2)">primary DNS</button>
+      <button type="button" onclick="goTo(9)">Route53 zones</button>
+      <button type="button" onclick="goTo(12)">Zscaler hijacking</button>
+      <button type="button" onclick="goTo(10)">/etc/hosts</button>
+      <button type="button" onclick="goTo(11)">curl --resolve</button>
+      <button type="button" onclick="goTo(7)">search path</button>
+      <button type="button" onclick="goTo(3)">caching &amp; TTL</button>
+      <button type="button" onclick="goTo(4)">A / CNAME / alias</button>
+      <button type="button" onclick="goTo(13)">SPF · DKIM · DMARC</button>
+      <button type="button" onclick="goTo(6)">dig / nslookup</button>
+    </div>
+    <div class="callout" style="margin-top:auto;">
+      <b>Don Eisele</b> — Platform Engineering, Operations Team, since January 2026. Previously
+      Lead for Systems, Infrastructure, Platform, and Cloud Architecture for 30 years at K-State.
+      <p style="margin:10px 0 0;">This is meant to be a deep dive into foundational topics that will help build a better foundation for technical and development success.</p>
+      <p style="margin:10px 0 0;">Don also teaches Aikido and Iaido — in the martial arts world, basics are the fundamental key to understanding everything else. Technology is no different.</p>
+    </div>
+  </section>
+
+  <!-- 2: what is dns -->
+  <section class="slide">
+    <div class="eyebrow">01 · Foundations</div>
+    <h2>DNS is just a lookup table for the internet</h2>
+    <p class="sub">Computers route by IP address. Humans remember names. DNS is the phone book that converts <code>app.purplewave.com</code> → <code>10.4.2.17</code> (or whatever it's hosting behind).</p>
+    <div class="body">
+      <div class="path">
+        <div class="node">you type<br><b>app.purplewave.com</b></div><span class="arrow">→</span>
+        <div class="node hot">DNS resolution</div><span class="arrow">→</span>
+        <div class="node">an IP address</div><span class="arrow">→</span>
+        <div class="node">TCP connection</div>
+      </div>
+      <div class="callout">Nothing loads a webpage without this step happening first — even "the site is down" is often actually "DNS couldn't resolve."</div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">Someone typo'd <code>app.purplewave.con</code> (not <code>.com</code>). Four different tools reported it four different ways — what do you think each one said, and are they actually describing the same underlying failure?</div>
+        <div class="row">
+          <div class="col term">
+<div class="line comment"># Chrome</div>
+<div class="line out">???</div>
+          </div>
+          <div class="col term">
+<div class="line comment"># dig</div>
+<div class="line"><span class="prompt">$</span> dig app.purplewave.con +short</div>
+<div class="line out">???</div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:2px;">
+          <div class="col term">
+<div class="line comment"># nslookup (Windows)</div>
+<div class="line"><span class="prompt">$</span> nslookup app.purplewave.con</div>
+<div class="line out">???</div>
+          </div>
+          <div class="col term">
+<div class="line comment"># curl</div>
+<div class="line"><span class="prompt">$</span> curl https://app.purplewave.con</div>
+<div class="line out">???</div>
+          </div>
+        </div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')" style="margin-top:12px;">Reveal answers</button>
+        <div class="answer">
+          <div class="row">
+            <div class="col term">
+<div class="line comment"># Chrome</div>
+<div class="line out">This site can't be reached
+app.purplewave.con's server DNS
+address could not be found.
+DNS_PROBE_FINISHED_NXDOMAIN</div>
+            </div>
+            <div class="col term">
+<div class="line comment"># dig</div>
+<div class="line"><span class="prompt">$</span> dig app.purplewave.con +short</div>
+<div class="line out">;; ->>HEADER<<- ... status: NXDOMAIN</div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <div class="col term">
+<div class="line comment"># nslookup (Windows)</div>
+<div class="line"><span class="prompt">$</span> nslookup app.purplewave.con</div>
+<div class="line out">Server:  10.10.0.53
+Address: 10.10.0.53#53
+
+*** 10.10.0.53 can't find
+app.purplewave.con: Non-existent
+domain</div>
+            </div>
+            <div class="col term">
+<div class="line comment"># curl</div>
+<div class="line"><span class="prompt">$</span> curl https://app.purplewave.con</div>
+<div class="line out">curl: (6) Could not resolve
+host: app.purplewave.con</div>
+            </div>
+          </div>
+          <div style="margin-top:10px;">All four are the <b>same failure</b> — the name simply doesn't exist (<code>NXDOMAIN</code>) — just reported in each tool's own words. Different from a <code>SERVFAIL</code> (the resolver itself errored) or a timeout (nobody answered at all).</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: primary dns server / resolution chain -->
+  <section class="slide">
+    <div class="eyebrow">02 · Primary DNS Server</div>
+    <h2>Your laptop asks <em>someone</em> — who is that?</h2>
+    <p class="sub">Every device has one or more configured DNS servers (see it in <code>ipconfig /all</code> or <code>scutil --dns</code>). That's your <b>resolver</b> — usually your router, VPN, or corporate DNS, which then asks the real internet on your behalf.</p>
+    <div class="body">
+      <div class="path">
+        <div class="node">Your laptop</div><span class="arrow">→</span>
+        <div class="node hot">Configured resolver<br><span class="mono" style="font-size:0.75rem;">e.g. 10.10.0.53</span></div><span class="arrow">→</span>
+        <div class="node">Root servers</div><span class="arrow">→</span>
+        <div class="node">.com TLD servers</div><span class="arrow">→</span>
+        <div class="node">purplewave.com<br>authoritative server</div>
+      </div>
+      <div class="row">
+        <div class="col panel">
+          <div class="panel-title">Beginner takeaway <span class="tag beginner">core</span></div>
+          The resolver does the legwork so your laptop doesn't have to know the whole internet's structure.
+        </div>
+        <div class="col panel">
+          <div class="panel-title">Deeper <span class="tag deep">detail</span></div>
+          This chain is recursive resolution. Each server only knows "ask that other guy next" — nobody holds the whole map.
+        </div>
+      </div>
+    </div>
+    <div class="ask">
+      <div class="q-label">Ask the room</div>
+      <div class="q-text">If two people on the same WiFi run <code>nslookup www.purplewave.com</code>, but one is on the VPN and one isn't — will they get the same answer?</div>
+      <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+      <div class="answer">Not necessarily. VPN traffic often points at an internal resolver that knows internal/private zones; off-VPN, that name may not resolve at all, or a public resolver might return something totally different (or NXDOMAIN). <b>Same name, different resolver, different truth.</b>
+        <p style="margin:10px 0 0;">Zscaler is especially bad about this — we'll talk about it separately down the road.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4: caching -->
+  <section class="slide">
+    <div class="eyebrow">03 · Behavior</div>
+    <h2>Caching: everyone remembers, for a while</h2>
+    <p class="sub">DNS answers get cached at every layer to avoid re-asking constantly: the browser, the OS resolver, the corporate/ISP resolver, and even intermediate servers. The TTL on the record tells each layer how long it's allowed to keep the answer.</p>
+    <div class="body">
+      <div class="path">
+        <div class="node">browser cache</div><span class="arrow">→</span>
+        <div class="node">OS cache</div><span class="arrow">→</span>
+        <div class="node">resolver cache</div><span class="arrow">→</span>
+        <div class="node hot">authoritative server<br>(ground truth)</div>
+      </div>
+      <div class="callout">Only that last hop is authoritative. Everything before it is a guess based on "last time I checked, this was the answer." <code>ipconfig /flushdns</code> or <code>sudo dscacheutil -flushcache</code> clears your local layer only — not everyone else's.</div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">A record's IP changes at 2am for a failover. Your laptop looked it up at 1:55am with a 3600s TTL. When do you see the new IP?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Not until your cached entry expires — up to <b>~55 minutes later</b> (1 hour TTL minus the 5 minutes already elapsed), unless something flushes the cache sooner. This is exactly why low TTLs get set before planned cutovers.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5: A record -->
+  <section class="slide">
+    <div class="eyebrow">04 · Record Types</div>
+    <h2>The A record: name → IP, full stop</h2>
+    <p class="sub">The most basic DNS record. It maps a hostname straight to an IPv4 address (AAAA does the same for IPv6).</p>
+    <div class="body">
+      <table class="records">
+        <tr><th>Name</th><th>Type</th><th>Value</th><th>TTL</th></tr>
+        <tr><td>app.purplewave.com</td><td>A</td><td class="rec-val">203.0.113.42</td><td>300</td></tr>
+        <tr><td>vpn.purplewave.com</td><td>A</td><td class="rec-val">198.51.100.7</td><td>3600</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- 5: CNAME / alias / cloudflare proxy -->
+  <section class="slide">
+    <div class="eyebrow">05 · Record Types</div>
+    <h2>CNAME: name → another name</h2>
+    <p class="sub">A CNAME doesn't point to an IP — it points to <em>another hostname</em>, which then gets resolved itself. Useful for pointing at things you don't control the IP of (a CDN, a load balancer, SaaS).</p>
+    <div class="body">
+      <div class="path">
+        <div class="node">www.purplewave.com</div><span class="arrow">CNAME →</span>
+        <div class="node">d111abc.cloudfront.net</div><span class="arrow">A →</span>
+        <div class="node hot">actual IP</div>
+      </div>
+      <div class="row">
+        <div class="col panel">
+          <div class="panel-title">Route53 Alias <span class="tag deep">AWS-specific</span></div>
+          Not a real DNS record type — Route53's own trick to point a zone's <b>apex</b> (bare domain, no www) at an AWS resource like CloudFront or an ALB, because a real CNAME can't legally sit at the zone apex. Behaves like a CNAME but resolves server-side.
+        </div>
+        <div class="col panel">
+          <div class="panel-title">Cloudflare "proxied" (orange cloud) <span class="tag deep">masking</span></div>
+          When proxied, the A/CNAME Cloudflare <i>publishes</i> is a Cloudflare edge IP, not your origin's real IP. Your true server is hidden behind it — traffic, and attacks, hit Cloudflare first.
+        </div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text"><code>dig shop.example.com</code> returns an IP owned by Cloudflare, not the company's known hosting provider. What's actually going on?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">The record is almost certainly Cloudflare-proxied. The public DNS answer intentionally isn't the origin server — it's Cloudflare's edge, which terminates TLS, maybe caches content, and forwards to the real backend over a connection you can't see from outside.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6: dig / nslookup -->
+  <section class="slide">
+    <div class="eyebrow">06 · Tools</div>
+    <h2>Verifying DNS truth without incomplete errors</h2>
+    <p class="sub">Instead of trusting the browser, ask the resolver yourself. This is the single most useful skill for debugging "it works for me."</p>
+    <div class="body">
+      <div class="term">
+<div class="line"><span class="prompt">$</span> dig app.purplewave.com +short</div>
+<div class="line out">203.0.113.42</div>
+<div class="line comment"># quick answer, no metadata</div>
+<div class="line"><span class="prompt">$</span> dig app.purplewave.com</div>
+<div class="line out">;; ANSWER SECTION:
+app.purplewave.com.  300  IN  A  203.0.113.42</div>
+<div class="line comment"># full answer: shows TTL (300s), record type, which server answered</div>
+<div class="line"><span class="prompt">$</span> nslookup app.purplewave.com</div>
+<div class="line out">Server:  10.10.0.53
+Address: 10.10.0.53#53
+Non-authoritative answer:
+Name:    app.purplewave.com
+Address: 203.0.113.42</div>
+      </div>
+      <div class="callout"><b>dig</b> is the operator's tool (Linux/Mac, more detail, scriptable). <b>nslookup</b> ships on Windows too and is fine for quick checks. <code>dig +trace</code> walks the whole root→TLD→authoritative chain live.</div>
+      <div class="ask">
+        <div class="q-label">Ask the audience</div>
+        <div class="q-text">What do you think this actually means?</div>
+        <div class="term">
+<div class="line out">;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 12345
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;foo.example.com.        IN    A
+
+;; ANSWER SECTION:
+foo.example.com.    300    IN    CNAME    ://target.com.</div>
+        </div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')" style="margin-top:12px;">Reveal answer</button>
+        <div class="answer">Two things are wrong at once, and both are real-world misconfigurations:
+          <p style="margin:10px 0 0;">1) <code>status: NXDOMAIN</code> next to a non-empty <code>ANSWER SECTION</code> isn't a contradiction — the <i>queried</i> name (<code>foo.example.com</code>) does have a CNAME, but the name it points <i>to</i> doesn't exist. dig still shows you the CNAME hop it found before hitting the dead end.</p>
+          <p style="margin:10px 0 0;">2) The CNAME target itself, <code>://target.com.</code>, is not a valid hostname — someone pasted a URL fragment (missing the scheme, like <code>https</code>) into a field that's supposed to hold a bare domain name. CNAME values are names, never URLs.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7: search path -->
+  <section class="slide">
+    <div class="eyebrow">07 · Behavior</div>
+    <h2>Search path: how a bare hostname gets completed</h2>
+    <p class="sub">Type <code>jira</code> instead of <code>jira.purplewave.com</code> and it still resolves? Your resolver's DNS <b>search suffix list</b> tries appending domains until one answers.</p>
+    <div class="body">
+      <div class="term">
+<div class="line comment"># resolv.conf / adapter DNS suffix</div>
+<div class="line out">search purplewave.com corp.purplewave.com</div>
+<div class="line comment">$ ping jira   → tries:</div>
+<div class="line out">jira.purplewave.com          ✗ maybe
+jira.corp.purplewave.com     ✓ found it</div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">A teammate on a different VPN profile types <code>jira</code> and gets "server not found," but it works for you. Same laptop model, same network. Why?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Different search domain configured for that VPN profile — the suffix list being appended doesn't include the domain where <code>jira</code> actually lives, so it never even tries the right full name.</div>
+      </div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg</div>
+        On the same network, no VPN tricks involved, a phone and a computer can get different results for the same bare hostname — <b>Android specifically ignores the DHCP-provided search suffix</b> (never appends it), while iOS/macOS apply it inconsistently depending on how the network was joined. Same DHCP answer, different OS behavior.
+      </div>
+    </div>
+  </section>
+
+  <!-- 9: third-level domains -->
+  <section class="slide">
+    <div class="eyebrow">08 · Naming</div>
+    <h2>Reading a domain name, right to left</h2>
+    <p class="sub">A hostname is a hierarchy. Each label is a step deeper, and each level can be delegated to a different owner or team.</p>
+    <div class="body">
+      <div class="zone-diagram">
+<span class="zk">app</span><span class="zv">.internal</span><span class="zv">.purplewave</span><span class="zv">.com</span><br>
+<span class="indent1">↑ 3rd-level / subdomain — <span class="zv">"app" bucket, owned by a team</span></span><br>
+<span class="indent1">↑ 2nd-level — <span class="zv">"internal", could be its own delegated zone</span></span><br>
+<span class="indent1">↑ registered domain — <span class="zv">purplewave.com, what you actually bought</span></span><br>
+<span class="indent1">↑ TLD — <span class="zv">.com, sold by a registry</span></span>
+      </div>
+      <div class="callout">"Third-level domain" = the label just under your registered domain — e.g. <code>internal</code> in <code>app.internal.purplewave.com</code>. Companies often carve these off for a reason: <code>internal.</code> for private-only stuff, <code>staging.</code> for pre-prod, a region code, a team name.</div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">What would be a good use-case for 3rd-level domains at Purplewave?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Consistent addresses throughout the product promotion path:
+          <div class="term" style="margin-top:8px;">
+<div class="line out">servicename.qa.purplewave.com
+servicename.staging.purplewave.com
+servicename.prod.purplewave.com</div>
+          </div>
+          Same service name, same registered domain — only the environment label changes, so nobody has to guess the address moving between stages.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10: internal zones / route53 private -->
+  <section class="slide">
+    <div class="eyebrow">09 · Internal Zones</div>
+    <h2>Private hosted zones: DNS that only exists inside your network</h2>
+    <p class="sub">Route53 (and most DNS providers) let you create a zone that's only answerable from inside a VPC/VPN — the public internet gets NXDOMAIN, but internal clients get a real answer.</p>
+    <div class="body">
+      <div class="row">
+        <div class="col panel">
+          <div class="panel-title">Public zone: cliquidator.info</div>
+          <table class="records">
+            <tr><th>Name</th><th>Type</th><th>Value</th></tr>
+            <tr><td>www</td><td>A</td><td>203.0.113.42</td></tr>
+          </table>
+        </div>
+        <div class="col panel">
+          <div class="panel-title">Private zone: cliquidator.info <span class="tag deep">VPC-only</span></div>
+          <table class="records">
+            <tr><th>Name</th><th>Type</th><th>Value</th></tr>
+            <tr><td>www</td><td>A</td><td>10.4.1.9</td></tr>
+            <tr><td>gw-qa</td><td>A</td><td>10.4.2.5</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">Someone off-VPN runs <code>dig gw-qa.cliquidator.info</code> from a coffee shop. What comes back?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">NXDOMAIN — the name genuinely doesn't exist from outside the VPC. It's not hidden or blocked, it simply isn't published anywhere the public resolver chain can see. Only resolvers associated with that VPC (or clients pointed at it via VPN) can answer it.</div>
+      </div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg</div>
+        Why different answers in different places inside AWS? A private hosted zone isn't one global answer — it's only associated with the specific VPCs you attach it to. You can have <b>multiple PHZs</b> for the same domain, each associated with a different set of VPCs, and each can hold different records. A resource in VPC A gets whatever's in the PHZ(s) associated with VPC A; a resource in VPC B — even in the same account, same region — gets whatever's associated with VPC B. If a name resolves in one environment's pod but not another's EC2 instance, check which VPC each one actually lives in and which PHZs are associated to it, not the record itself.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11: /etc/hosts -->
+  <section class="slide">
+    <div class="eyebrow">10 · Overrides</div>
+    <h2>/etc/hosts: skip DNS entirely, locally</h2>
+    <p class="sub">Before any DNS query is sent, your OS checks a local static file. An entry there wins — no network round trip, no cache, no TTL, just an instant match.</p>
+    <div class="body">
+      <div class="row">
+        <div class="col term">
+<div class="line comment"># macOS / Linux: /etc/hosts</div>
+<div class="line out">127.0.0.1   localhost
+10.4.2.5    jira.internal.purplewave.com
+203.0.113.99 app.purplewave.com</div>
+        </div>
+        <div class="col term">
+<div class="line comment"># Windows: C:\Windows\System32\drivers\etc\hosts</div>
+<div class="line out">10.4.2.5    jira.internal.purplewave.com</div>
+        </div>
+      </div>
+      <div class="callout">Classic uses: testing a site against a not-yet-live server, blocking a domain locally, or working around a broken/hijacked DNS answer by hardcoding the truth yourself.</div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">A dev swears <code>app.purplewave.com</code> points to the new server. <code>dig</code> from the same laptop shows the old IP. Who's lying?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Neither, probably. <code>dig</code> talks straight to DNS and bypasses hosts entirely — so it can show a totally different answer than what the browser actually uses. Check <code>/etc/hosts</code> (or hosts file) first; a stale entry there explains the mismatch.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12: curl --resolve -->
+  <section class="slide">
+    <div class="eyebrow">11 · Overrides</div>
+    <h2>curl --resolve: a one-request override, no file editing</h2>
+    <p class="sub">Same idea as /etc/hosts, but scoped to a single command — great for testing a server before its DNS is live, or bypassing a broken/hijacked resolver just to test.</p>
+    <div class="body">
+      <div class="term">
+<div class="line"><span class="prompt">$</span> curl --resolve app.purplewave.com:443:203.0.113.99 https://app.purplewave.com/health</div>
+<div class="line comment"># forces this one request to use .99, but the TLS cert still has to match app.purplewave.com</div>
+      </div>
+      <div class="row">
+        <div class="col panel">
+          <div class="panel-title">Beginner takeaway <span class="tag beginner">core</span></div>
+          Lets you test "is the new server actually working" before flipping DNS — without touching any config files.
+        </div>
+        <div class="col panel">
+          <div class="panel-title">Deeper <span class="tag deep">detail</span></div>
+          Also the fastest way to prove "is this a DNS problem or an app problem" — if <code>--resolve</code>-ing straight to the known-good IP fixes it, DNS was the culprit.
+        </div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">Why might this not work when doing this from a developer's workstation at Purplewave, even though it does from the staging server, or from a Kubernetes pod?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Several things can quietly win over your <code>--resolve</code> flag or the request itself before it reaches the target:
+          <ul style="margin:8px 0 0; padding-left:20px;">
+            <li><b>/etc/hosts</b> — a stale local entry can still redirect or short-circuit the connection</li>
+            <li><b>Zscaler</b> — TLS inspection/proxying on the workstation intercepts the connection regardless of what IP curl was told to use</li>
+            <li><b>Route53 private hosted zone mapping</b> — the workstation isn't on the VPC/VPN that would resolve to the internal target, so the TLS cert or routing context won't line up</li>
+            <li><b>Typos</b> — the classic: wrong port, wrong scheme, or a hostname that doesn't match the cert</li>
+          </ul>
+          The staging server and the pod skip all of this because they sit inside the network path the request actually needs.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13: zscaler hijacking -->
+  <section class="slide">
+    <div class="eyebrow">12 · The Twist</div>
+    <h2>Zscaler and "DNS hijacking" — on purpose, by policy</h2>
+    <p class="sub">Corporate security tools like Zscaler often act as a transparent DNS (and TLS) intermediary. Your device asks for a name; Zscaler answers with <em>its own</em> IP instead of the real one, then proxies the connection so it can inspect traffic.</p>
+    <div class="body">
+      <div class="path">
+        <div class="node">you query<br>github.com</div><span class="arrow">→</span>
+        <div class="node warn">Zscaler resolver<br>(intercepts)</div><span class="arrow">→</span>
+        <div class="node">Zscaler proxy IP<br><span class="mono" style="font-size:0.75rem;">not github's real IP</span></div><span class="arrow">→</span>
+        <div class="node">real github.com<br>(on your behalf)</div>
+      </div>
+      <div class="callout warn"><b>This is why dig from a Zscaler-managed machine can lie to you.</b> The answer is technically correct for that network's policy — it's just not the record the rest of the internet sees. It's the same mechanism a malicious hijack would use; the difference here is it's sanctioned, logged, and reversible by disconnecting/exempting Zscaler.</div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">Everything about this app looks correct. I can get to it, internal DNS is set up — but I'm still getting NXDOMAIN on my workstation. What's going on?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Zscaler proxies the traffic on the back end — and if <i>it</i> can't reach the end resource itself, it won't resolve the DNS name at all. That surfaces as NXDOMAIN and looks exactly like a DNS problem, when the actual cause could be something else entirely: a security group, a routing table, a firewall rule. Don't stop at "DNS is broken" — check whether Zscaler itself can reach the target before chasing the DNS config.</div>
+      </div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg — pseudo-hijacking, closer to home: Kubernetes</div>
+        Zscaler rewrites DNS on purpose from outside your app. Your own platform does something structurally similar, on purpose, from inside it: why does <code>nats-auth-service</code> work as a URL in a configMap? That's the <b>Kubernetes cluster DNS resolver</b> — same search-path idea from earlier, just scoped inside the cluster. The pod's resolv.conf appends namespace/cluster suffixes until something answers; what's actually being resolved is <code>nats-auth-service.production.svc.cluster.local</code>. Nothing hijacked it maliciously — the cluster's own DNS just completed the name the same way a corporate search suffix would.
+      </div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg — pseudo-hijacking, closer to home: nginx</div>
+        Same idea, one layer down: <code>http://elasticsearch</code> in an nginx config usually isn't DNS at all — it's an nginx <b>upstream</b> block, a label defined locally in nginx's own config and mapped to real backends before DNS ever gets a say. Grepping DNS records for it comes up empty; the redirect lives in the nginx config itself.
+      </div>
+    </div>
+  </section>
+
+  <!-- 14: SPF DKIM DMARC -->
+  <section class="slide">
+    <div class="eyebrow">13 · Email &amp; Trust</div>
+    <h2>SPF, DKIM, DMARC: DNS proving "this email is legit"</h2>
+    <p class="sub">These are just TXT records — but they're how the entire email industry decides whether to trust a message claiming to be from your domain.</p>
+    <div class="body">
+      <table class="records">
+        <tr><th>Record</th><th>Answers</th><th>Example (TXT)</th></tr>
+        <tr><td>SPF</td><td>which servers may send as this domain</td><td class="rec-val">"v=spf1 include:_spf.google.com -all"</td></tr>
+        <tr><td>DKIM</td><td>was this message tampered in transit?</td><td class="rec-val">selector._domainkey → "v=DKIM1; p=MIIBIjAN..."</td></tr>
+        <tr><td>DMARC</td><td>what to do if SPF/DKIM fail</td><td class="rec-val">"v=DMARC1; p=reject; rua=mailto:dmarc@purplewave.com"</td></tr>
+      </table>
+      <div class="callout">These three together are why a spoofed "billing@purplewave.com" email gets rejected or quarantined at most vendors: it fails SPF/DKIM alignment, and a DMARC policy of <code>p=reject</code> tells receivers not to deliver it. This only works because the policy lives in DNS, publicly, for any mail server to check.</div>
+    </div>
+  </section>
+
+  <!-- 15: wrap -->
+  <section class="slide">
+    <div class="eyebrow">Wrap-up</div>
+    <h2>The mental model to keep</h2>
+    <div class="body">
+      <div class="row">
+        <div class="col panel"><div class="panel-title">Resolution</div>Every name walks resolver → root → TLD → authoritative, unless something short-circuits it (hosts file, --resolve, cache).</div>
+        <div class="col panel"><div class="panel-title">Records</div>A = IP. CNAME = another name. Alias/proxy = "the published answer isn't the real backend."</div>
+        <div class="col panel"><div class="panel-title">Trust</div>DNS isn't just addressing — SPF/DKIM/DMARC turn it into an identity and authorization system.</div>
+        <div class="col panel"><div class="panel-title">Interception</div>Zscaler-style hijacking is normal corporate DNS — same mechanism as an attack, opposite intent.</div>
+      </div>
+      <div class="callout">Next time something "isn't resolving right": <code>dig</code> it, check the hosts file, check the search suffix, then ask whether something in the middle (VPN, Zscaler, proxy) is answering instead of the real authority.</div>
+    </div>
+  </section>
+
+  <div class="navbar">
+    <button class="navbtn" id="prevBtn" onclick="go(-1)">← Prev</button>
+    <div class="dots" id="dots"></div>
+    <span class="counter" id="counter"></span>
+    <button class="navbtn" id="nextBtn" onclick="go(1)">Next →</button>
+  </div>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+let idx = 0;
+const dotsEl = document.getElementById('dots');
+slides.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.onclick = () => { idx = i; render(); };
+  dotsEl.appendChild(d);
+});
+function render(){
+  slides.forEach((s,i) => s.classList.toggle('active', i === idx));
+  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i === idx));
+  document.getElementById('counter').textContent = (idx+1) + ' / ' + slides.length;
+  document.getElementById('prevBtn').disabled = idx === 0;
+  document.getElementById('nextBtn').disabled = idx === slides.length - 1;
+}
+function go(delta){
+  idx = Math.min(slides.length - 1, Math.max(0, idx + delta));
+  render();
+}
+function goTo(i){
+  idx = Math.min(slides.length - 1, Math.max(0, i));
+  render();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') go(1);
+  if (e.key === 'ArrowLeft') go(-1);
+});
+render();
+</script>

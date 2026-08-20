@@ -1,0 +1,651 @@
+<title>TLS in Depth: Trusted Until It Isn't</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#eef1ef;
+  --surface:#ffffff;
+  --surface-2:#e2e7e4;
+  --ink:#161c1a;
+  --muted:#5c6b66;
+  --line:#c7d0cb;
+  --accent:#1f7a6c;
+  --accent-ink:#ffffff;
+  --accent-2:#b9631f;
+  --accent-2-ink:#ffffff;
+  --danger:#a63a3a;
+  --danger-bg:#f6e4e0;
+  --good-bg:#e2f0e9;
+  --shadow: rgba(20,30,26,0.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11151a;
+    --surface:#171d23;
+    --surface-2:#1f2830;
+    --ink:#e7ede9;
+    --muted:#93a19b;
+    --line:#2a343c;
+    --accent:#5fc9b3;
+    --accent-ink:#0b1512;
+    --accent-2:#e0a15c;
+    --accent-2-ink:#231402;
+    --danger:#e28a83;
+    --danger-bg:#33201f;
+    --good-bg:#1b2e28;
+    --shadow: rgba(0,0,0,0.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11151a;
+  --surface:#171d23;
+  --surface-2:#1f2830;
+  --ink:#e7ede9;
+  --muted:#93a19b;
+  --line:#2a343c;
+  --accent:#5fc9b3;
+  --accent-ink:#0b1512;
+  --accent-2:#e0a15c;
+  --accent-2-ink:#231402;
+  --danger:#e28a83;
+  --danger-bg:#33201f;
+  --good-bg:#1b2e28;
+  --shadow: rgba(0,0,0,0.4);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:28px 16px 90px;
+}
+h1,h2,h3{font-family:"Manrope", ui-sans-serif, system-ui, sans-serif; text-wrap:balance; margin:0;}
+code, .mono, .rec-val, kbd{font-family:"IBM Plex Mono", ui-monospace, monospace;}
+.deck{width:100%; max-width:920px;}
+.chrome{
+  display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;
+  color:var(--muted); font-size:0.78rem; letter-spacing:0.06em; text-transform:uppercase;
+}
+.chrome .brand{color:var(--accent); font-weight:600;}
+.slide{
+  background:var(--surface); border:1px solid var(--line); border-radius:14px;
+  padding:44px 48px; min-height:520px; box-shadow:0 12px 30px var(--shadow);
+  display:none; flex-direction:column; gap:18px; position:relative; overflow:hidden;
+}
+.slide.active{display:flex;}
+.eyebrow{font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); font-weight:600;}
+.slide h2{font-size:1.9rem; font-weight:800; line-height:1.15;}
+.sub{color:var(--muted); font-size:1.02rem; max-width:65ch; line-height:1.55;}
+.body{flex:1; display:flex; flex-direction:column; gap:16px; justify-content:center;}
+.row{display:flex; gap:16px; flex-wrap:wrap;}
+.col{flex:1; min-width:220px;}
+
+.panel{background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:16px 18px;}
+.panel-title{font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:8px; font-weight:600;}
+.term{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:10px;
+  padding:14px 16px; font-size:0.92rem; overflow-x:auto;
+}
+.term .line{white-space:pre; line-height:1.6;}
+.term .prompt{color:var(--accent-2);}
+.term .out{color:var(--ink);}
+.term .comment{color:var(--muted);}
+
+table.records{width:100%; border-collapse:collapse; font-size:0.92rem;}
+table.records th, table.records td{
+  text-align:left; padding:7px 10px; border-bottom:1px solid var(--line);
+  font-family:"IBM Plex Mono", ui-monospace, monospace;
+}
+table.records th{font-family:"IBM Plex Sans"; color:var(--muted); text-transform:uppercase; font-size:0.68rem; letter-spacing:0.06em; font-weight:600;}
+
+.path{display:flex; align-items:center; gap:0; flex-wrap:wrap; margin:6px 0;}
+.node{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+  padding:8px 12px; font-size:0.82rem; font-weight:600; white-space:nowrap;
+}
+.node.hot{border-color:var(--accent); color:var(--accent);}
+.node.warn{border-color:var(--danger); color:var(--danger);}
+.arrow{color:var(--muted); padding:0 8px; font-size:1rem;}
+
+.ask{
+  border:1.5px dashed var(--accent-2); border-radius:10px; padding:16px 18px;
+  background: color-mix(in srgb, var(--accent-2) 8%, transparent);
+}
+.ask .q-label{font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent-2); font-weight:700; margin-bottom:6px;}
+.ask .q-text{font-size:1.05rem; font-weight:600; margin-bottom:10px;}
+.reveal-btn{
+  background:var(--accent-2); color:var(--accent-2-ink); border:none; border-radius:7px;
+  padding:8px 14px; font-size:0.85rem; font-weight:700; cursor:pointer; font-family:inherit;
+}
+.reveal-btn:hover{filter:brightness(1.06);}
+.answer{
+  margin-top:12px; padding-top:12px; border-top:1px solid var(--line);
+  display:none; font-size:0.95rem; line-height:1.55; color:var(--ink);
+}
+.answer.shown{display:block;}
+.tag{
+  display:inline-block; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;
+  padding:2px 8px; border-radius:20px; font-weight:700; margin-right:6px;
+}
+.tag.beginner{background:var(--good-bg); color:var(--accent);}
+.tag.deep{background:var(--danger-bg); color:var(--danger);}
+.callout{
+  border-left:3px solid var(--accent); padding:10px 14px; background:var(--surface-2); border-radius:0 8px 8px 0;
+  font-size:0.9rem; color:var(--muted);
+}
+.callout.warn{border-left-color:var(--danger);}
+.callout b{color:var(--ink);}
+
+.egg{border:1px dotted var(--line); border-radius:10px; padding:12px 16px; font-size:0.88rem; color:var(--muted); background:transparent;}
+.egg-label{font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); font-weight:700; margin-bottom:6px;}
+.egg b{color:var(--ink);}
+
+.navbar{
+  position:fixed; bottom:0; left:0; right:0;
+  display:flex; justify-content:center; align-items:center; gap:14px;
+  padding:14px 0; background:linear-gradient(to top, var(--bg) 60%, transparent);
+}
+.navbtn{
+  background:var(--surface); border:1px solid var(--line); color:var(--ink);
+  border-radius:8px; padding:8px 16px; font-size:0.85rem; font-weight:600; cursor:pointer;
+  font-family:"IBM Plex Sans";
+}
+.navbtn:hover{border-color:var(--accent); color:var(--accent);}
+.navbtn:disabled{opacity:0.35; cursor:default;}
+.dots{display:flex; gap:6px;}
+.dot{width:7px; height:7px; border-radius:50%; background:var(--line); cursor:pointer;}
+.dot.active{background:var(--accent); width:20px; border-radius:4px;}
+.counter{font-family:"IBM Plex Mono"; font-size:0.8rem; color:var(--muted); min-width:52px; text-align:center;}
+
+.title-slide{align-items:flex-start; justify-content:center;}
+.title-slide h1{font-size:2.8rem; font-weight:800; line-height:1.05;}
+.title-slide .sub{font-size:1.15rem;}
+.title-list{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}
+.title-list button{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:20px;
+  padding:5px 12px; font-size:0.78rem; color:var(--muted); font-family:"IBM Plex Mono";
+  cursor:pointer; transition:border-color .15s, color .15s;
+}
+.title-list button:hover, .title-list button:focus-visible{border-color:var(--accent); color:var(--accent); outline:none;}
+
+.chain-diagram{font-family:"IBM Plex Mono"; font-size:1rem; line-height:2.1;}
+.indent1{padding-left:1.4em;}
+.zk{color:var(--accent-2);}
+.zv{color:var(--muted);}
+
+kbd{background:var(--surface-2); border:1px solid var(--line); border-radius:5px; padding:1px 6px; font-size:0.78rem;}
+@media (prefers-reduced-motion: no-preference){ .slide.active{animation:rise .28s ease;} }
+@keyframes rise{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+</style>
+
+<div class="deck">
+  <div class="chrome"><span class="brand">TLS in Depth: Trusted Until It Isn't</span><span id="slideLabel"></span></div>
+
+  <!-- 0: TITLE -->
+  <section class="slide active title-slide">
+    <div class="eyebrow">Tech Week 2026 - Don Eisele, Platform Engineering</div>
+    <h1>TLS in Depth<br>Trusted Until It Isn't</h1>
+    <p class="sub">The companion session to "DNS in Depth." The crypto and the handshake are the short warm-up — the real subject is what actually goes wrong, and how to fix it fast.</p>
+    <div class="title-list">
+      <button type="button" onclick="goTo(1)">crypto basics</button>
+      <button type="button" onclick="goTo(2)">handshake</button>
+      <button type="button" onclick="goTo(3)">PKI chain</button>
+      <button type="button" onclick="goTo(4)">x.509 fields</button>
+      <button type="button" onclick="goTo(6)">untrusted authority</button>
+      <button type="button" onclick="goTo(7)">cipher mismatch</button>
+      <button type="button" onclick="goTo(8)">hostname mismatch</button>
+      <button type="button" onclick="goTo(9)">expired / revoked</button>
+      <button type="button" onclick="goTo(10)">networking issues</button>
+      <button type="button" onclick="goTo(11)">openssl</button>
+      <button type="button" onclick="goTo(14)">node.js</button>
+      <button type="button" onclick="goTo(15)">go</button>
+    </div>
+    <div class="callout" style="margin-top:auto;">
+      <b>Don Eisele</b> — Platform Engineering, Operations Team, since January 2026. Previously
+      Lead for Systems, Infrastructure, Platform, and Cloud Architecture for 30 years at K-State.
+      <p style="margin:10px 0 0;">This is meant to be a deep dive into foundational topics that will help build a better foundation for technical and development success.</p>
+      <p style="margin:10px 0 0;">Don also teaches Aikido and Iaido — in the martial arts world, basics are the fundamental key to understanding everything else. Technology is no different.</p>
+    </div>
+  </section>
+
+  <!-- 1: crypto foundations -->
+  <section class="slide">
+    <div class="eyebrow">01 · Foundations (kept short)</div>
+    <h2>The four ideas under all of TLS</h2>
+    <p class="sub">A layman's pass — enough to follow the handshake and the debugging later, not a cryptography course.</p>
+    <div class="body">
+      <div class="row">
+        <div class="col panel">
+          <div class="panel-title">Symmetric encryption</div>
+          One key locks <i>and</i> unlocks. Fast. Problem: both sides need the same key — and getting it to the other side safely is the hard part.
+        </div>
+        <div class="col panel">
+          <div class="panel-title">Asymmetric encryption</div>
+          Two keys: a public one anyone can use to lock, a private one only you hold to unlock. Solves the sharing problem. Slower — too slow for bulk data.
+        </div>
+      </div>
+      <div class="row">
+        <div class="col panel">
+          <div class="panel-title">Hashing</div>
+          A one-way fingerprint of data. Same input always gives the same hash; change one byte and the hash is completely different. Can't be reversed back to the original.
+        </div>
+        <div class="col panel">
+          <div class="panel-title">Digital signature</div>
+          Hash the message, then encrypt <i>that hash</i> with your private key. Anyone with your public key can verify it — proving both who sent it and that it wasn't altered.
+        </div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">If asymmetric crypto is the "slow" one, why doesn't every HTTPS page feel slow?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Asymmetric crypto is only used briefly, during the handshake, to safely agree on a shared secret. Once that's done, both sides switch to fast <b>symmetric</b> encryption for the actual data. TLS uses the slow, safe method just long enough to bootstrap the fast one.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2: handshake -->
+  <section class="slide">
+    <div class="eyebrow">02 · Foundations (kept short)</div>
+    <h2>The handshake: who says what, in what order</h2>
+    <p class="sub">Skipping the math — this is about the message exchange. Simplified (TLS 1.2-style) for clarity.</p>
+    <div class="body">
+      <div class="path">
+        <div class="node">Client:<br>ClientHello</div><span class="arrow">→</span>
+        <div class="node">Server:<br>ServerHello + certificate</div><span class="arrow">→</span>
+        <div class="node hot">Client validates<br>the cert chain</div><span class="arrow">→</span>
+        <div class="node">Key exchange</div><span class="arrow">→</span>
+        <div class="node">Finished<br>(both sides)</div>
+      </div>
+      <div class="callout">TLS 1.3 collapses several of these round trips, but the sequence of ideas is the same: say hello and list capabilities, present identity, verify identity, agree on a shared secret, confirm.</div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">At what exact point does the client actually decide whether it trusts the server?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Right after it receives the certificate in <code>ServerHello</code> — before any key exchange finishes, before any application data flows. Chain validation happens at that point in the exchange, not at "the handshake completing." A trust failure here aborts the connection immediately; nothing encrypted with the session key is ever sent.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: PKI -->
+  <section class="slide">
+    <div class="eyebrow">03 · PKI</div>
+    <h2>Root, intermediate, leaf: why the chain exists</h2>
+    <p class="sub">Your OS/browser ships with a small set of trusted <b>root</b> CAs. Roots almost never sign server certs directly — they sign <b>intermediate</b> CAs, which sign the actual <b>leaf</b> (server) certificate you get.</p>
+    <div class="body">
+      <div class="path">
+        <div class="node hot">Root CA<br><span class="mono" style="font-size:0.72rem;">in OS trust store</span></div><span class="arrow">signs →</span>
+        <div class="node">Intermediate CA</div><span class="arrow">signs →</span>
+        <div class="node">Leaf cert<br>(your server)</div>
+      </div>
+      <div class="callout">Keeping roots offline and rarely used limits the blast radius if a CA is compromised — only the intermediate needs to be revoked, not the root everyone trusts.</div>
+      <div class="panel">
+        <div class="panel-title">The order the server actually sends certs in</div>
+        Order is absolutely critical: each certificate must sign the one before it, ending in a root that the <b>client machine's own CA store</b> has to already trust.
+        <ol style="margin:10px 0 0; padding-left:20px;">
+          <li>Server (leaf) certificate</li>
+          <li>Intermediate certificate(s)</li>
+          <li>Root certificate</li>
+        </ol>
+        If the server forgets an intermediate, you get an untrusted/incomplete chain error even though the root is trusted — clients generally won't go fetch a missing intermediate on their own. Sending the full chain, every time, is the server's job.
+      </div>
+    </div>
+  </section>
+
+  <!-- 4: x.509 fields -->
+  <section class="slide">
+    <div class="eyebrow">04 · Certificates</div>
+    <h2>x.509: the fields that actually matter</h2>
+    <p class="sub">A certificate is mostly metadata plus a signature. These fields cause the vast majority of real-world problems.</p>
+    <div class="body">
+      <table class="records">
+        <tr><th>Field</th><th>What it means</th></tr>
+        <tr><td>CN</td><td class="mono" style="font-family:'IBM Plex Sans';">Common Name — historically "the hostname"</td></tr>
+        <tr><td>SAN</td><td class="mono" style="font-family:'IBM Plex Sans';">Subject Alternative Name — the list of hostnames/IPs this cert is valid for</td></tr>
+        <tr><td>Not Before / Not After</td><td class="mono" style="font-family:'IBM Plex Sans';">the validity window — expiration lives here</td></tr>
+        <tr><td>Fingerprint</td><td class="mono" style="font-family:'IBM Plex Sans';">a hash of the whole cert (usually SHA-256) — a unique thumbprint for pinning/verification</td></tr>
+        <tr><td>Issuer</td><td class="mono" style="font-family:'IBM Plex Sans';">who signed this cert — the first place to look when chasing an untrusted-authority error</td></tr>
+        <tr><td>Key Usage / EKU / Constraints</td><td class="mono" style="font-family:'IBM Plex Sans';">what the cert is allowed to be used for (server auth, client auth, code signing...) and whether it's allowed to sign other certs at all (<code>CA:TRUE</code>/<code>CA:FALSE</code>) — a valid, trusted, correctly-named cert still fails without <code>serverAuth</code>, and a leaf cert flagged <code>CA:TRUE</code> breaks chain validation</td></tr>
+        <tr><td>Subject/Authority Key ID</td><td class="mono" style="font-family:'IBM Plex Sans';">hashes of this cert's key and its issuer's key — how chain-building actually matches a cert to its issuer, especially during a CA key rotation</td></tr>
+        <tr><td>Public Key Algorithm</td><td class="mono" style="font-family:'IBM Plex Sans';">RSA vs. ECDSA, and key size — a factor in cipher/protocol negotiation, not just identity</td></tr>
+      </table>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">Browsers stopped trusting the CN field for hostname matching years ago. What field actually decides whether a hostname matches now?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer"><b>SAN</b> — Chrome deprecated CN-based matching in 2017 (Chrome 58); modern clients only check the SAN list. A cert with a perfect-looking CN but no matching SAN entry will still fail hostname validation. If you're issuing or debugging certs, SAN is the field to check first — CN is legacy decoration at this point.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5: debugging intro -->
+  <section class="slide">
+    <div class="eyebrow">05 · Debugging</div>
+    <h2>This is the real subject: five buckets of failure</h2>
+    <p class="sub">Everything above was setup. In practice, almost every TLS error you'll ever see falls into one of five buckets — the rest of this session is each one, in detail, with the tools to tell them apart fast.</p>
+    <div class="body">
+      <div class="row">
+        <div class="col panel"><div class="panel-title">1. Untrusted authority</div>Client doesn't trust whoever signed this cert.</div>
+        <div class="col panel"><div class="panel-title">2. Cipher / protocol mismatch</div>Client and server can't agree on how to talk at all.</div>
+        <div class="col panel"><div class="panel-title">3. Hostname mismatch</div>The cert is valid and trusted — just not for this name.</div>
+      </div>
+      <div class="row">
+        <div class="col panel"><div class="panel-title">4. Expired or revoked</div>The cert was fine once; it isn't anymore.</div>
+        <div class="col panel"><div class="panel-title">5. Networking issues</div>Nothing wrong with the cert at all — the handshake never got far enough to matter.</div>
+      </div>
+      <div class="callout">The error message rarely says which bucket you're in plainly — part of the skill is reading past the wording to the actual cause.</div>
+    </div>
+  </section>
+
+  <!-- 6: untrusted authority -->
+  <section class="slide">
+    <div class="eyebrow">06 · Debugging</div>
+    <h2>Bucket 1: untrusted authority</h2>
+    <p class="sub">The client doesn't have (or doesn't trust) whoever signed this certificate — a missing intermediate, a private CA, or a self-signed cert nobody told the client about.</p>
+    <div class="body">
+      <div class="term">
+<div class="line comment"># curl</div>
+<div class="line out">curl: (60) SSL certificate problem: unable to
+get local issuer certificate</div>
+<div class="line comment"># browser</div>
+<div class="line out">NET::ERR_CERT_AUTHORITY_INVALID</div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">curl says "unable to get local issuer certificate," but the same URL works fine in Chrome on the same machine. What's different?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">They don't share a trust store. Chrome ships and manages its own root/intermediate store (and is often more current); curl on Linux typically reads a system CA bundle (<code>/etc/ssl/certs/ca-certificates.crt</code> or similar) that can be outdated, missing a newer intermediate, or simply not have a private/internal CA installed. Same cert, two different judges.</div>
+      </div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg — the -k flag</div>
+        <code>curl -k</code> (<code>--insecure</code>) skips certificate verification entirely — handy for confirming "is this actually a trust problem" while debugging. Don't leave it in a script or a healthcheck: that's disabling TLS verification permanently, not diagnosing anything.
+      </div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg — not every app looks in the same place</div>
+        Different runtimes and apps often have their own idea of where the CA store lives (a language runtime's bundled store, an app-specific config, an environment variable override) — separate from the OS trust store entirely. If everything else about the setup looks right and it's still failing, don't assume it's reading the store you think it is — track down which CA bundle that specific process is actually using.
+      </div>
+    </div>
+  </section>
+
+  <!-- 7: cipher mismatch -->
+  <section class="slide">
+    <div class="eyebrow">07 · Debugging</div>
+    <h2>Bucket 2: cipher / protocol mismatch</h2>
+    <p class="sub">The handshake fails before certificates are even the issue — client and server simply don't have any TLS version or cipher suite in common.</p>
+    <div class="body">
+      <div class="term">
+<div class="line out">javax.net.ssl.SSLHandshakeException:
+Received fatal alert: handshake_failure</div>
+<div class="line comment"># or, from OpenSSL's side:</div>
+<div class="line out">error:1417C0C7:SSL routines:
+tls_process_client_hello:no shared cipher</div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">What do these two errors usually mean (hint: they're related)?</div>
+        <div class="term">
+<div class="line out">curl: (35) OpenSSL/3.0.13: error:0A00010B:SSL
+routines::wrong version number</div>
+<div class="line out">HTTP/1.1 400 Bad Request</div>
+        </div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')" style="margin-top:12px;">Reveal answer</button>
+        <div class="answer">Look at what actually got requested:
+          <div class="term" style="margin-top:8px;">
+<div class="line"><span class="prompt">$</span> curl https://purplewave.com:80</div>
+<div class="line"><span class="prompt">$</span> curl -I http://purplewave.com:443</div>
+          </div>
+          See the problem? Each one is talking the wrong protocol to the wrong port — TLS aimed at the plaintext port, and plain HTTP aimed at the TLS port. "Wrong version number" is OpenSSL's way of saying "I tried to read a TLS handshake and got plaintext instead"; a plain <code>400 Bad Request</code> from a TLS-only port is the mirror image — a webserver reading raw HTTP text where it expected a handshake. Neither is really a cipher/protocol <i>negotiation</i> failure — it's the wrong protocol on the wrong port, port and scheme swapped.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8: hostname mismatch -->
+  <section class="slide">
+    <div class="eyebrow">08 · Debugging</div>
+    <h2>Bucket 3: hostname mismatch</h2>
+    <p class="sub">The cert is perfectly valid and fully trusted — it's just not issued for the name you actually connected to.</p>
+    <div class="body">
+      <div class="term">
+<div class="line out">NET::ERR_CERT_COMMON_NAME_INVALID</div>
+<div class="line comment"># cert SAN: app.purplewave.com
+# you connected to: 10.4.2.17  (bare IP)</div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">Chain is trusted, dates are fine, everything checks out — but the browser still throws a hostname mismatch. Why?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Trust and identity are two separate checks. The name the client actually asked for — a bare IP, an internal load-balancer alias, a Host header override — isn't in the cert's SAN list. A cert being validly signed says nothing about which names it's valid <i>for</i>; that's a completely separate comparison against SAN.</div>
+      </div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg — wildcards and blast radius</div>
+        A wildcard cert (<code>*.purplewave.com</code>) isn't cryptographically weaker than a cert issued for one exact hostname — same algorithms, same trust rules. The difference is <b>blast radius</b>: a wildcard's private key is shared across every host using it, so if that key gets loose, finding and replacing it everywhere it was deployed takes far longer than rotating a single exact-host cert. Convenient to issue, slower to clean up if things go wrong.
+      </div>
+    </div>
+  </section>
+
+  <!-- 9: expired / revoked -->
+  <section class="slide">
+    <div class="eyebrow">09 · Debugging</div>
+    <h2>Bucket 4: expired or revoked</h2>
+    <p class="sub">The cert was fine once. Now it either aged out (Not After passed) or the CA actively pulled trust before that date (revocation).</p>
+    <div class="body">
+      <div class="row">
+        <div class="col term">
+<div class="line comment"># expired</div>
+<div class="line out">NET::ERR_CERT_DATE_INVALID
+Not After : Aug 12 2026 (past)</div>
+        </div>
+        <div class="col term">
+<div class="line comment"># revoked</div>
+<div class="line out">NET::ERR_CERT_REVOKED</div>
+        </div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">The cert's dates look completely fine — Not After is months away — but the browser says revoked. How is that even checked?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Revocation is a separate, active check from expiration — via <b>OCSP</b> (a live query to the CA: "is this serial number still good?") or a <b>CRL</b> (a downloadable list of revoked serials). A CA revokes early for reasons expiration doesn't cover: private key compromise, mis-issuance, the domain changing hands. Some clients soft-fail (ignore an unreachable OCSP responder); browsers increasingly hard-fail. Expiration is a calendar date; revocation is the CA saying "actually, no" mid-lifetime.</div>
+      </div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg — what about the computer's clock?</div>
+        A system clock too far off can absolutely make a valid cert look expired or not-yet-valid — that's a real, mundane cause worth checking. But you likely can't fix it by just setting the clock wrong to "trick" a browser into accepting an actually-expired cert: modern browsers cross-check time against sources like <b>Roughtime</b> and the server's own <code>Date</code> response header, not just the local clock alone.
+      </div>
+    </div>
+  </section>
+
+  <!-- 10: networking issues -->
+  <section class="slide">
+    <div class="eyebrow">10 · Debugging</div>
+    <h2>Bucket 5: networking issues</h2>
+    <p class="sub">The cert is fine. TLS itself is fine. The handshake never got far enough for either to matter — something below TLS killed the connection first.</p>
+    <div class="body">
+      <div class="term">
+<div class="line comment"># curl</div>
+<div class="line out">curl: (35) OpenSSL SSL_connect: Connection
+reset by peer in connection to app.purplewave.com:443</div>
+<div class="line comment"># or, further along:</div>
+<div class="line out">curl: (28) SSL connection timeout</div>
+      </div>
+      <div class="callout">Nothing about the certificate yet — a reset or timeout during the handshake usually means the connection never reached the TLS layer cleanly at all. Check basic reachability first: a <b>security group or firewall rule</b> blocking the port, a <b>load balancer</b> health-check or idle-timeout killing the connection mid-handshake, MTU/packet fragmentation, or a middlebox (proxy, another Zscaler-style inspector) actively terminating it. If the client never even got a ServerHello, the problem is below TLS — don't start debugging certs until you've confirmed the connection itself is stable.</div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg</div>
+        Check out my Connectivity talk — this subject is an entire talk on its own.
+      </div>
+    </div>
+  </section>
+
+  <!-- 11: openssl page 1 -->
+  <section class="slide">
+    <div class="eyebrow">11 · Tools</div>
+    <h2>OpenSSL: talking to the server directly</h2>
+    <p class="sub"><code>openssl s_client</code> performs the handshake by hand, so you see exactly what the server presents — no browser, no app-level retry logic hiding the real error.</p>
+    <div class="body">
+      <div class="term">
+<div class="line"><span class="prompt">$</span> openssl s_client -connect app.purplewave.com:443 -servername app.purplewave.com</div>
+<div class="line out">CONNECTED(00000003)
+depth=2 C = US, O = Example CA, CN = Example Root CA
+verify return:1
+---
+Certificate chain
+ 0 s:CN = app.purplewave.com
+   i:CN = Example Intermediate CA
+ 1 s:CN = Example Intermediate CA
+   i:CN = Example Root CA
+---</div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">Why do I need <code>-servername</code> in addition to <code>-connect host:port</code>?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">That's <b>SNI</b> (Server Name Indication). A single IP:port can host many TLS certificates for different domains (virtual hosting, shared load balancers, CDNs). Without <code>-servername</code>, the server doesn't know which cert to hand back — it may return a default/fallback cert, which then looks exactly like a hostname-mismatch bug when the real issue was a missing flag on your test command, not a server misconfiguration.</div>
+      </div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg — Zscaler strikes again</div>
+        On a Zscaler-managed machine, <code>s_client</code> will happily show you a cert — just not the real one. Zscaler intercepts the TLS connection and re-signs it with its own certificate so it can inspect traffic. You can't get a trustworthy read on the actual server's cert chain from a Zscaler-intercepted connection; run it from somewhere off that path (a different network, a jump box, a container outside the proxy) to see what's really there.
+      </div>
+    </div>
+  </section>
+
+  <!-- 12: openssl page 2 -->
+  <section class="slide">
+    <div class="eyebrow">12 · Tools</div>
+    <h2>OpenSSL: reading and verifying what you got</h2>
+    <p class="sub">Once you have the cert, these are the commands that answer "what does it actually say" and "does it actually chain to something I trust."</p>
+    <div class="body">
+      <div class="term">
+<div class="line comment"># dump human-readable fields (CN, SAN, dates, issuer)</div>
+<div class="line"><span class="prompt">$</span> openssl x509 -in cert.pem -noout -text</div>
+<div class="line comment"># just the validity window</div>
+<div class="line"><span class="prompt">$</span> openssl x509 -in cert.pem -noout -dates</div>
+<div class="line comment"># the SHA-256 fingerprint</div>
+<div class="line"><span class="prompt">$</span> openssl x509 -in cert.pem -noout -fingerprint -sha256</div>
+<div class="line comment"># does this chain actually verify against a CA bundle?</div>
+<div class="line"><span class="prompt">$</span> openssl verify -CAfile ca-bundle.pem cert.pem</div>
+<div class="line comment"># force a specific protocol version to isolate a cipher/protocol mismatch</div>
+<div class="line"><span class="prompt">$</span> openssl s_client -connect host:443 -tls1_2</div>
+      </div>
+      <div class="callout">Pull straight from the live server instead of a file with <code>openssl s_client ... | openssl x509 -noout -text</code> — useful when you don't have the cert on disk, just a hostname that's misbehaving.</div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg — stop asking for the cert</div>
+        You shouldn't ever need to ask someone to send you a certificate off a running server. If it's live and reachable, <code>openssl s_client</code> fetches exactly what it's presenting, straight from the source — no waiting on a ticket, no risk of getting a stale copy someone had lying around.
+        <p style="margin:10px 0 0;">The private key is a different story — that, you can't just fetch from a live connection. If it was regenerated fresh rather than renewed against the existing key, every place that needs it has to actually receive the new one; there's no shortcut around shipping it around securely.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13: verifying the entire chain -->
+  <section class="slide">
+    <div class="eyebrow">13 · Tools</div>
+    <h2>Verifying the entire chain</h2>
+    <p class="sub">One cert at a time only tells you so much. This shows every certificate the server actually sent, in the order it sent them.</p>
+    <div class="body">
+      <div class="term">
+<div class="line"><span class="prompt">$</span> openssl s_client -showcerts -connect host:443 -servername app.purplewave.com</div>
+      </div>
+      <div class="callout">Same order as before — leaf → intermediate(s) → root — this just lets you see it directly from the server instead of taking it on faith.</div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg — yes, it's noisy</div>
+        <code>-showcerts</code> dumps every cert in full — expect a wall of base64. You can narrow it down with the flags from the previous slide depending on what you're actually chasing (just the subject/issuer lines, just dates, just the chain depth) instead of reading the whole thing by eye every time.
+      </div>
+    </div>
+  </section>
+
+  <!-- 14: node.js -->
+  <section class="slide">
+    <div class="eyebrow">14 · Language-Specific</div>
+    <h2>Debugging TLS in Node.js</h2>
+    <p class="sub">Node's TLS errors are usually verbose enough to name the bucket directly — the trap is the "fix" that's actually a much bigger hammer than intended.</p>
+    <div class="body">
+      <table class="records">
+        <tr><th>Error</th><th>Bucket</th></tr>
+        <tr><td>UNABLE_TO_VERIFY_LEAF_SIGNATURE</td><td class="mono" style="font-family:'IBM Plex Sans';">untrusted authority — usually a missing intermediate</td></tr>
+        <tr><td>DEPTH_ZERO_SELF_SIGNED_CERT</td><td class="mono" style="font-family:'IBM Plex Sans';">untrusted authority — no CA at all, self-signed</td></tr>
+        <tr><td>ERR_TLS_CERT_ALTNAME_INVALID</td><td class="mono" style="font-family:'IBM Plex Sans';">hostname mismatch — check SAN</td></tr>
+        <tr><td>CERT_HAS_EXPIRED</td><td class="mono" style="font-family:'IBM Plex Sans';">expired</td></tr>
+      </table>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">Someone "fixes" a Node cert error by setting <code>NODE_TLS_REJECT_UNAUTHORIZED=0</code>. What did they actually just break?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Every outbound TLS connection in that entire process, for the life of the process — not just the one request that had the problem. It disables certificate validation globally, so MITM protection is gone for every HTTPS call the app makes. The scoped fix is <code>NODE_EXTRA_CA_CERTS</code> pointing at the missing/private CA bundle, or passing a specific <code>ca</code> option to the one client that needs it.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15: go -->
+  <section class="slide">
+    <div class="eyebrow">15 · Language-Specific</div>
+    <h2>Debugging TLS in Go</h2>
+    <p class="sub">Go's <code>crypto/x509</code> errors are usually precise about which bucket you're in — the classic trap here is environmental, not code.</p>
+    <div class="body">
+      <div class="term">
+<div class="line out">x509: certificate signed by unknown authority</div>
+<div class="line out">x509: certificate is valid for app.internal,
+not app.purplewave.com</div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">A Go binary throws <code>x509: certificate signed by unknown authority</code> only when run inside a Docker container — never on the host it was built on. Why?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Minimal base images (<code>scratch</code>, a bare <code>alpine</code> without the <code>ca-certificates</code> package) don't ship an OS trust store. Go's <code>x509.SystemCertPool()</code> reads that OS store — on the build host it's populated; inside the stripped-down container it's empty or missing entries. Fix: install <code>ca-certificates</code> in the image, or bake a specific root pool into the binary via <code>InsecureSkipVerify</code>'s much safer cousin, a custom <code>RootCAs</code> pool — never reach for <code>InsecureSkipVerify: true</code> as the fix.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16: wrap -->
+  <section class="slide">
+    <div class="eyebrow">Wrap-up</div>
+    <h2>The mental model to keep</h2>
+    <div class="body">
+      <div class="row">
+        <div class="col panel"><div class="panel-title">Crypto</div>Asymmetric bootstraps trust briefly; symmetric does the actual work — fast, once agreed on.</div>
+        <div class="col panel"><div class="panel-title">Chain</div>Trust flows root → intermediate → leaf. A missing intermediate breaks a client that trusts the root fine.</div>
+        <div class="col panel"><div class="panel-title">Identity ≠ trust</div>A validly signed, unexpired cert can still be for the wrong name. SAN decides identity; the chain decides trust.</div>
+        <div class="col panel"><div class="panel-title">Five buckets</div>Untrusted authority, cipher/protocol mismatch, hostname mismatch, expired/revoked, networking — nearly every real error is one of these.</div>
+      </div>
+      <div class="callout">Next time a TLS error shows up: <code>openssl s_client -servername</code> straight at it before touching any app code. It tells you the chain, the dates, and the negotiated protocol/cipher — usually enough to name the bucket in under a minute.</div>
+    </div>
+  </section>
+
+  <div class="navbar">
+    <button class="navbtn" id="prevBtn" onclick="go(-1)">← Prev</button>
+    <div class="dots" id="dots"></div>
+    <span class="counter" id="counter"></span>
+    <button class="navbtn" id="nextBtn" onclick="go(1)">Next →</button>
+  </div>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+let idx = 0;
+const dotsEl = document.getElementById('dots');
+slides.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.onclick = () => { idx = i; render(); };
+  dotsEl.appendChild(d);
+});
+function render(){
+  slides.forEach((s,i) => s.classList.toggle('active', i === idx));
+  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i === idx));
+  document.getElementById('counter').textContent = (idx+1) + ' / ' + slides.length;
+  document.getElementById('prevBtn').disabled = idx === 0;
+  document.getElementById('nextBtn').disabled = idx === slides.length - 1;
+}
+function go(delta){
+  idx = Math.min(slides.length - 1, Math.max(0, idx + delta));
+  render();
+}
+function goTo(i){
+  idx = Math.min(slides.length - 1, Math.max(0, i));
+  render();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') go(1);
+  if (e.key === 'ArrowLeft') go(-1);
+});
+render();
+</script>
