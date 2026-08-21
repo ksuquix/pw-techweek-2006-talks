@@ -547,7 +547,7 @@ servicename.prod.purplewave.com</div>
   <section class="slide">
     <div class="eyebrow">09 · Internal Zones</div>
     <h2>Private hosted zones: DNS that only exists inside your network</h2>
-    <p class="sub">Route53 (and most DNS providers) let you create a zone that's only answerable from inside a VPC/VPN — the public internet gets NXDOMAIN, but internal clients get a real answer.</p>
+    <p class="sub">Route53 (and most DNS providers) let you create a zone that's only answerable from inside a VPC/VPN — the public internet gets NXDOMAIN, but internal clients get a real answer. Getting different answers for the same name depending on where the query comes from is generally called <b>split-horizon DNS</b>.</p>
     <div class="body">
       <div class="row">
         <div class="col panel">
@@ -568,9 +568,15 @@ servicename.prod.purplewave.com</div>
       </div>
       <div class="ask">
         <div class="q-label">Ask the room</div>
-        <div class="q-text">Someone off-VPN runs <code>dig gw-qa.cliquidator.info</code> from a coffee shop. What comes back?</div>
+        <div class="q-text">Why would we want the answers to be different inside and outside the company?</div>
         <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
-        <div class="answer">NXDOMAIN — the name genuinely doesn't exist from outside the VPC. It's not hidden or blocked, it simply isn't published anywhere the public resolver chain can see. Only resolvers associated with that VPC (or clients pointed at it via VPN) can answer it.</div>
+        <div class="answer">A few overlapping reasons, all valid at once:
+          <ul style="margin:8px 0 0; padding-left:20px;">
+            <li><b>Performance</b> — we don't want local traffic routing all the way out to a region like Virginia and back just to reach something sitting right next to it.</li>
+            <li><b>Security</b> — we don't want purely internal traffic riding the public internet at all, even encrypted.</li>
+            <li><b>Security</b> — we want the ability to inspect our internal traffic, which only works if that traffic actually flows through infrastructure we control.</li>
+          </ul>
+        </div>
       </div>
       <div class="egg">
         <div class="egg-label">🥚 Easter egg</div>
