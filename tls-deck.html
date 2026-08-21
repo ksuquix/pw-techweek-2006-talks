@@ -453,6 +453,10 @@ Not After : Aug 12 2026 (past)</div>
         <div class="egg-label">🥚 Easter egg — what about the computer's clock?</div>
         A system clock too far off can absolutely make a valid cert look expired or not-yet-valid — that's a real, mundane cause worth checking. But you likely can't fix it by just setting the clock wrong to "trick" a browser into accepting an actually-expired cert: modern browsers cross-check time against sources like <b>Roughtime</b> and the server's own <code>Date</code> response header, not just the local clock alone.
       </div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg — one intermediate, two roots</div>
+        An intermediate CA can actually be signed by two different root CAs (cross-signing) — either root can verify the same intermediate, and a client just needs to trust one of them. But if the chain-building logic picks the path through the root that's expired, the whole cert gets classified as expired even though a perfectly valid path through the other root exists.
+      </div>
     </div>
   </section>
 
@@ -472,7 +476,7 @@ reset by peer in connection to app.purplewave.com:443</div>
       <div class="callout">Nothing about the certificate yet — a reset or timeout during the handshake usually means the connection never reached the TLS layer cleanly at all. Check basic reachability first: a <b>security group or firewall rule</b> blocking the port, a <b>load balancer</b> health-check or idle-timeout killing the connection mid-handshake, MTU/packet fragmentation, or a middlebox (proxy, another Zscaler-style inspector) actively terminating it. If the client never even got a ServerHello, the problem is below TLS — don't start debugging certs until you've confirmed the connection itself is stable.</div>
       <div class="egg">
         <div class="egg-label">🥚 Easter egg</div>
-        Check out my Connectivity talk — this subject is an entire talk on its own.
+        Check out my <a href="https://claude.ai/code/artifact/0115afde-05aa-46f2-84e3-f3d800c0f90d" target="_blank" rel="noopener" style="color:var(--accent); font-weight:700;">Connectivity talk</a> — this subject is an entire talk on its own.
       </div>
     </div>
   </section>
@@ -607,6 +611,12 @@ not app.purplewave.com</div>
         <div class="col panel"><div class="panel-title">Five buckets</div>Untrusted authority, cipher/protocol mismatch, hostname mismatch, expired/revoked, networking — nearly every real error is one of these.</div>
       </div>
       <div class="callout">Next time a TLS error shows up: <code>openssl s_client -servername</code> straight at it before touching any app code. It tells you the chain, the dates, and the negotiated protocol/cipher — usually enough to name the bucket in under a minute.</div>
+      <div class="callout"><b>Check out the others in this series:</b>
+        <ul style="margin:8px 0 0; padding-left:20px;">
+          <li><a href="https://claude.ai/code/artifact/26a58358-73a7-40b3-b3ad-72d819ca457a" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">DNS in Depth: Simple Until It Isn't</a></li>
+          <li><a href="https://claude.ai/code/artifact/0115afde-05aa-46f2-84e3-f3d800c0f90d" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">Connectivity in Depth: It's Not Always DNS</a></li>
+        </ul>
+      </div>
     </div>
   </section>
 

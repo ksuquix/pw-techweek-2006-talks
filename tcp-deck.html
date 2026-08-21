@@ -397,7 +397,7 @@ kbd{background:var(--surface-2); border:1px solid var(--line); border-radius:5px
           <div class="term">
 <div class="line"><span class="prompt">$</span> openssl s_client -connect app.purplewave.com:443</div>
           </div>
-          <div style="margin-top:8px;">Once TCP connects but something's still wrong — performs the real TLS handshake by hand (covered in depth in the TLS talk).</div>
+          <div style="margin-top:8px;">Once TCP connects but something's still wrong — performs the real TLS handshake by hand (covered in depth in the <a href="https://claude.ai/code/artifact/5853ce33-0bd4-40c5-ba13-61b02ef6fb99" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">TLS talk</a>).</div>
         </div>
       </div>
       <div class="ask">
@@ -417,13 +417,13 @@ kbd{background:var(--surface-2); border:1px solid var(--line); border-radius:5px
     <div class="body">
       <table class="records">
         <tr><th>Error</th><th>What it means</th></tr>
-        <tr><td>Could not resolve host</td><td class="mono" style="font-family:'IBM Plex Sans';">not a TCP problem at all — DNS never gave back an address to connect to (see the DNS talk)</td></tr>
+        <tr><td>Could not resolve host</td><td class="mono" style="font-family:'IBM Plex Sans';">not a TCP problem at all — DNS never gave back an address to connect to (see the <a href="https://claude.ai/code/artifact/26a58358-73a7-40b3-b3ad-72d819ca457a" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">DNS talk</a>)</td></tr>
         <tr><td>Failed to connect / Couldn't connect to server</td><td class="mono" style="font-family:'IBM Plex Sans';">curl's generic wrapper message — by itself, mostly unuseful; the real cause is whatever's appended after it. When it isn't, reach for <code>nc -zv</code> against the same host/port to get the specific reason curl won't say</td></tr>
         <tr><td>Connection reset (by peer)</td><td class="mono" style="font-family:'IBM Plex Sans';">the connection was established, then torn down mid-stream by an RST — different from refused, which never connected at all. Common causes: the app literally crashed while answering, a next-gen firewall inspected the traffic mid-stream and didn't like what it saw, or one side simply lost its internet connection outright</td></tr>
         <tr><td>Connection timed out</td><td class="mono" style="font-family:'IBM Plex Sans';">nothing answered at all within the timeout — packets went nowhere. You'll see it as a hang, not an instant error: the command just sits there until it finally gives up</td></tr>
         <tr><td>No route to host</td><td class="mono" style="font-family:'IBM Plex Sans';">the local machine or a router along the way has no path to that address</td></tr>
         <tr><td>Empty reply from server</td><td class="mono" style="font-family:'IBM Plex Sans';">TCP connected fine — the app on the other end closed the connection without sending anything</td></tr>
-        <tr><td>SSL certificate problem</td><td class="mono" style="font-family:'IBM Plex Sans';">TCP is fine — this is past that layer entirely. If it works with <code>-k</code>, it's a cert/trust issue, not a connectivity one (see the TLS talk)</td></tr>
+        <tr><td>SSL certificate problem</td><td class="mono" style="font-family:'IBM Plex Sans';">TCP is fine — this is past that layer entirely. If it works with <code>-k</code>, it's a cert/trust issue, not a connectivity one (see the <a href="https://claude.ai/code/artifact/5853ce33-0bd4-40c5-ba13-61b02ef6fb99" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">TLS talk</a>)</td></tr>
         <tr><td>HTTP 500</td><td class="mono" style="font-family:'IBM Plex Sans';">TCP connected fine, this is entirely app-layer — a middleman couldn't get to the real application: the app itself is down or broken, or a load balancer can't route to it</td></tr>
         <tr><td>SSL routines::wrong version number</td><td class="mono" style="font-family:'IBM Plex Sans';">TCP connected, but what came back wasn't TLS at all — classic sign of hitting a plain HTTP port with an HTTPS request</td></tr>
         <tr><td>400 "The plain HTTP request..."</td><td class="mono" style="font-family:'IBM Plex Sans';">the mirror image — hitting an HTTPS port with plain HTTP, and the server's telling you so in plaintext instead of failing the handshake</td></tr>
@@ -445,7 +445,7 @@ kbd{background:var(--surface-2); border:1px solid var(--line); border-radius:5px
       </div>
       <table class="records">
         <tr><th>Output</th><th>What it means</th></tr>
-        <tr><td>Name or service not known</td><td class="mono" style="font-family:'IBM Plex Sans';">not a TCP problem at all — DNS never gave back an address to connect to (see the DNS talk)</td></tr>
+        <tr><td>Name or service not known</td><td class="mono" style="font-family:'IBM Plex Sans';">not a TCP problem at all — DNS never gave back an address to connect to (see the <a href="https://claude.ai/code/artifact/26a58358-73a7-40b3-b3ad-72d819ca457a" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">DNS talk</a>)</td></tr>
         <tr><td>Connection ... succeeded!</td><td class="mono" style="font-family:'IBM Plex Sans';">the port is open and something's listening</td></tr>
         <tr><td>... failed: Connection refused</td><td class="mono" style="font-family:'IBM Plex Sans';">the port is closed, or nothing is listening — the app might not be running, or a forwarder/proxy in front of it isn't listening. The box is up, nobody's answering the door</td></tr>
         <tr><td>... failed: Operation timed out</td><td class="mono" style="font-family:'IBM Plex Sans';">nothing answered at all — the same silent drop as curl's timeout</td></tr>
@@ -472,7 +472,7 @@ kbd{background:var(--surface-2); border:1px solid var(--line); border-radius:5px
       </div>
       <table class="records">
         <tr><th>Output</th><th>What it means</th></tr>
-        <tr><td>No such host is known</td><td class="mono" style="font-family:'IBM Plex Sans';">not a TCP problem at all — DNS never gave back an address to connect to (see the DNS talk)</td></tr>
+        <tr><td>No such host is known</td><td class="mono" style="font-family:'IBM Plex Sans';">not a TCP problem at all — DNS never gave back an address to connect to (see the <a href="https://claude.ai/code/artifact/26a58358-73a7-40b3-b3ad-72d819ca457a" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">DNS talk</a>)</td></tr>
         <tr><td>TcpTestSucceeded : True</td><td class="mono" style="font-family:'IBM Plex Sans';">the port is open and something's listening — DNS resolved and the connection went through</td></tr>
         <tr><td>TcpTestSucceeded : False (RemoteAddress filled in)</td><td class="mono" style="font-family:'IBM Plex Sans';">DNS worked fine — something in the path is blocking or refusing the port specifically. PowerShell won't tell you which, unlike curl or nc</td></tr>
         <tr><td>PingSucceeded : False</td><td class="mono" style="font-family:'IBM Plex Sans';">ICMP failed or is blocked — doesn't mean the TCP port is unreachable, just a different protocol entirely</td></tr>
@@ -488,7 +488,7 @@ kbd{background:var(--surface-2); border:1px solid var(--line); border-radius:5px
     <p class="sub">Not "interferes with the network" in some vague sense — it intercepts and changes properties at three specific layers already covered in this series, and knowing which one is misbehaving is most of the debugging.</p>
     <div class="body">
       <div class="row">
-        <div class="col panel"><div class="panel-title">DNS</div>Points resolution to Zscaler's own IPs instead of the real answer — same mechanism as the DNS talk's hijacking slide.</div>
+        <div class="col panel"><div class="panel-title">DNS</div>Points resolution to Zscaler's own IPs instead of the real answer — same mechanism as the <a href="https://claude.ai/code/artifact/26a58358-73a7-40b3-b3ad-72d819ca457a" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">DNS talk</a>'s hijacking slide.</div>
         <div class="col panel"><div class="panel-title">TLS</div>Opens its own new connection to the real backend, then hands you back a connection signed with Zscaler's own internal cert — not the backend's.</div>
         <div class="col panel"><div class="panel-title">Connection</div>Builds a proxied TCP connection to the backend on your behalf — you're talking to Zscaler, Zscaler is talking to the destination.</div>
       </div>
@@ -548,14 +548,20 @@ kbd{background:var(--surface-2); border:1px solid var(--line); border-radius:5px
     <p class="sub">Isolate which layer is actually failing before assuming the whole network is broken — each rung has its own tool.</p>
     <div class="body">
       <div class="row">
-        <div class="col panel"><div class="panel-title">1. Does the name resolve?</div><code>dig</code> / <code>nslookup</code> — DNS in Depth territory.</div>
+        <div class="col panel"><div class="panel-title">1. Does the name resolve?</div><code>dig</code> / <code>nslookup</code> — <a href="https://claude.ai/code/artifact/26a58358-73a7-40b3-b3ad-72d819ca457a" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">DNS in Depth</a> territory.</div>
         <div class="col panel"><div class="panel-title">2. Does the port accept a connection?</div><code>nc -zv</code> / <code>Test-NetConnection</code> — plain TCP, no app layer at all.</div>
       </div>
       <div class="row">
-        <div class="col panel"><div class="panel-title">3. Does the TLS handshake succeed?</div><code>openssl s_client</code> — TLS in Depth territory.</div>
+        <div class="col panel"><div class="panel-title">3. Does the TLS handshake succeed?</div><code>openssl s_client</code> — <a href="https://claude.ai/code/artifact/5853ce33-0bd4-40c5-ba13-61b02ef6fb99" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">TLS in Depth</a> territory.</div>
         <div class="col panel"><div class="panel-title">4. Does the application actually respond?</div><code>curl</code> with the real request — the first layer where app logic, not networking, can be the cause.</div>
       </div>
       <div class="callout">You can usually start anywhere on the ladder — but let the errors and messages you get point you toward the next place to look.</div>
+      <div class="callout"><b>Check out the others in this series:</b>
+        <ul style="margin:8px 0 0; padding-left:20px;">
+          <li><a href="https://claude.ai/code/artifact/26a58358-73a7-40b3-b3ad-72d819ca457a" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">DNS in Depth: Simple Until It Isn't</a></li>
+          <li><a href="https://claude.ai/code/artifact/5853ce33-0bd4-40c5-ba13-61b02ef6fb99" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">TLS in Depth: Trusted Until It Isn't</a></li>
+        </ul>
+      </div>
     </div>
   </section>
 
