@@ -453,6 +453,10 @@ Not After : Aug 12 2026 (past)</div>
         <div class="egg-label">🥚 Easter egg — what about the computer's clock?</div>
         A system clock too far off can absolutely make a valid cert look expired or not-yet-valid — that's a real, mundane cause worth checking. But you likely can't fix it by just setting the clock wrong to "trick" a browser into accepting an actually-expired cert: modern browsers cross-check time against sources like <b>Roughtime</b> and the server's own <code>Date</code> response header, not just the local clock alone.
       </div>
+      <div class="egg">
+        <div class="egg-label">🥚 Easter egg — one intermediate, two roots</div>
+        An intermediate CA can actually be signed by two different root CAs (cross-signing) — either root can verify the same intermediate, and a client just needs to trust one of them. But if the chain-building logic picks the path through the root that's expired, the whole cert gets classified as expired even though a perfectly valid path through the other root exists.
+      </div>
     </div>
   </section>
 
