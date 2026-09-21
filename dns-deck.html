@@ -2,53 +2,53 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 :root{
-  --bg:#eef1ef;
+  --bg:#f3f0f8;
   --surface:#ffffff;
-  --surface-2:#e2e7e4;
-  --ink:#161c1a;
-  --muted:#5c6b66;
-  --line:#c7d0cb;
-  --accent:#1f7a6c;
+  --surface-2:#e8e2f2;
+  --ink:#231f20;
+  --muted:#6b6270;
+  --line:#d6cee3;
+  --accent:#4f2682;
   --accent-ink:#ffffff;
-  --accent-2:#b9631f;
+  --accent-2:#9c7a1b;
   --accent-2-ink:#ffffff;
-  --danger:#a63a3a;
-  --danger-bg:#f6e4e0;
-  --good-bg:#e2f0e9;
+  --danger:#c94a43;
+  --danger-bg:#f7e3e1;
+  --good-bg:#e3f2e4;
   --shadow: rgba(20,30,26,0.10);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#11151a;
-    --surface:#171d23;
-    --surface-2:#1f2830;
-    --ink:#e7ede9;
-    --muted:#93a19b;
-    --line:#2a343c;
-    --accent:#5fc9b3;
-    --accent-ink:#0b1512;
-    --accent-2:#e0a15c;
-    --accent-2-ink:#231402;
-    --danger:#e28a83;
-    --danger-bg:#33201f;
-    --good-bg:#1b2e28;
+    --bg:#1c0f2e;
+    --surface:#271640;
+    --surface-2:#33204f;
+    --ink:#f2ecf7;
+    --muted:#b3a3c9;
+    --line:#4a2f6e;
+    --accent:#b89bdc;
+    --accent-ink:#1c0f2e;
+    --accent-2:#e5c558;
+    --accent-2-ink:#2e2205;
+    --danger:#e98b85;
+    --danger-bg:#3a1f22;
+    --good-bg:#1f3324;
     --shadow: rgba(0,0,0,0.4);
   }
 }
 :root[data-theme="dark"]{
-  --bg:#11151a;
-  --surface:#171d23;
-  --surface-2:#1f2830;
-  --ink:#e7ede9;
-  --muted:#93a19b;
-  --line:#2a343c;
-  --accent:#5fc9b3;
-  --accent-ink:#0b1512;
-  --accent-2:#e0a15c;
-  --accent-2-ink:#231402;
-  --danger:#e28a83;
-  --danger-bg:#33201f;
-  --good-bg:#1b2e28;
+  --bg:#1c0f2e;
+  --surface:#271640;
+  --surface-2:#33204f;
+  --ink:#f2ecf7;
+  --muted:#b3a3c9;
+  --line:#4a2f6e;
+  --accent:#b89bdc;
+  --accent-ink:#1c0f2e;
+  --accent-2:#e5c558;
+  --accent-2-ink:#2e2205;
+  --danger:#e98b85;
+  --danger-bg:#3a1f22;
+  --good-bg:#1f3324;
   --shadow: rgba(0,0,0,0.4);
 }
 *{box-sizing:border-box;}
@@ -101,6 +101,7 @@ code, .mono, .rec-val, kbd{font-family:"IBM Plex Mono", ui-monospace, monospace;
   color:var(--accent);
   font-weight:600;
 }
+.eyebrow::before{content:"\25C6"; margin-right:0.5em; font-size:0.85em;}
 .slide h2{font-size:1.9rem; font-weight:800; line-height:1.15;}
 .sub{color:var(--muted); font-size:1.02rem; max-width:65ch; line-height:1.55;}
 .body{flex:1; display:flex; flex-direction:column; gap:16px; justify-content:center;}
@@ -234,6 +235,19 @@ kbd{background:var(--surface-2); border:1px solid var(--line); border-radius:5px
   .slide.active{animation:rise .28s ease;}
 }
 @keyframes rise{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+.title-slide{
+  position:relative;
+  background-image:
+    linear-gradient(135deg, transparent 55%, color-mix(in srgb, var(--accent) 16%, transparent) 55%),
+    linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--accent) 10%, transparent) 75%);
+  background-repeat:no-repeat;
+  background-size:70% 100%, 45% 55%;
+  background-position:right top, left bottom;
+}
+.title-badge{position:absolute; top:20px; right:20px; width:104px; height:auto; z-index:2; filter:drop-shadow(0 6px 16px rgba(0,0,0,0.25));}
+.title-rule{border:none; border-top:1px solid var(--line); margin:2px 0 0; width:220px;}
+.navbar-logo{height:18px; width:auto; padding:5px 9px; background:var(--accent); border-radius:6px; display:block;}
 </style>
 
 <div class="deck">
@@ -241,9 +255,11 @@ kbd{background:var(--surface-2); border:1px solid var(--line); border-radius:5px
 
   <!-- 1 TITLE -->
   <section class="slide active title-slide">
+    <img class="title-badge" src="assets/tech-week-badge.png" alt="Tech Week 2026 Racing to Excellence badge">
     <div class="eyebrow">Tech Week 2026 - Don Eisele, Platform Engineering</div>
     <h1>DNS in Depth<br>Simple Until It Isn't</h1>
     <p class="sub">From "what happens when I type a hostname" to why Zscaler seems to know things it shouldn't. Beginner-friendly, with detours for anyone who wants the operator-level view.</p>
+    <hr class="title-rule">
     <div class="title-list">
       <button type="button" onclick="goTo(2)">primary DNS</button>
       <button type="button" onclick="goTo(9)">Route53 zones</button>
@@ -714,12 +730,17 @@ servicename.prod.purplewave.com</div>
           <li><a href="https://claude.ai/code/artifact/0115afde-05aa-46f2-84e3-f3d800c0f90d" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">Connectivity in Depth: It's Not Always DNS</a></li>
         </ul>
       </div>
+      <div class="callout" style="display:flex; align-items:center; gap:16px;">
+        <img src="assets/qr-code.png" alt="QR code linking to the full series" style="width:84px; height:84px; border-radius:6px; flex-shrink:0; background:#fff; padding:6px;">
+        <div><b>All three talks, one link:</b><br><a href="https://ksuquix.github.io/pw-techweek-2006-talks/" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">ksuquix.github.io/pw-techweek-2006-talks</a></div>
+      </div>
     </div>
   </section>
 
   <div class="navbar">
     <button class="navbtn" id="prevBtn" onclick="go(-1)">← Prev</button>
     <div class="dots" id="dots"></div>
+    <img class="navbar-logo" src="assets/pw-logo.png" alt="Purple Wave">
     <span class="counter" id="counter"></span>
     <button class="navbtn" id="nextBtn" onclick="go(1)">Next →</button>
   </div>
