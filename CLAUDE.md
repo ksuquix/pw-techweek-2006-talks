@@ -600,7 +600,7 @@ Identical tokens, fonts, and base components to the other decks (CSS copied from
 ## Slide order (17 total)
 
 0. **Title**: eyebrow is just "Don Eisele, Platform Engineering" (no Tech Week label or badge),
-   topic chips (`goTo(i)`), and the same presenter-bio callout
+   no topic-chip cloud (removed; the other three decks still have one), and the same presenter-bio callout
 1. **How to work a case**: four questions (exact words / who said it / which rung / when and how
    wide), plus a callout pointing to the ladder on the next slide (the old inline `.path` ladder row
    was trimmed). The egg covers the 7-day retention: "this is a normal week."
