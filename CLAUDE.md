@@ -643,7 +643,7 @@ Identical tokens, fonts, and base components to the other decks (CSS copied from
     with nginx falling back to v4
 14. **Case 11, Cloudflare codes** (table + ask): 530/521/522/524/520 mapped to rungs. The 35.7k 522s
     come from abandoned staging DNS records probed by bots, with a subdomain-takeover angle.
-15. **Lightning Round** (title was "War stories: the symptom said one layer"; still `id="war-stories"`, reachable from anywhere with the **W** key): three cards, each symptom → "Reveal testing commands" → answer reveal. The
+15. **Lightning round** (no `<h2>`; the eyebrow "15 · Lightning round" is the only title. Still `id="war-stories"`, reachable from anywhere with the **W** key): three cards, each symptom → "Reveal testing commands" → answer reveal. The
     command boxes here are deliberately bare, commands and output only, with no `# ✓`/`# ✗` or
     rung comments, so the room reads the output and names the rung before the answer is shown.
 16. **Wrap-up, the field guide**: four lessons, a "try it yourself" callout, links to the other
