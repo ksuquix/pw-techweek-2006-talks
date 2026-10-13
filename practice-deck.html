@@ -267,11 +267,11 @@ table.records td code{font-size:0.86rem;}
       <button type="button" onclick="goTo(5)">eight services, one problem</button>
       <button type="button" onclick="goTo(6)">refused vs. timed out</button>
       <button type="button" onclick="goTo(7)">a whole morning</button>
-      <button type="button" onclick="goTo(8)">idle connections</button>
-      <button type="button" onclick="goTo(9)">two nginx timeouts</button>
-      <button type="button" onclick="goTo(10)">the 502 that was a deploy</button>
-      <button type="button" onclick="goTo(11)">IPv6</button>
-      <button type="button" onclick="goTo(12)">TLS errors that aren't</button>
+      <button type="button" onclick="goTo(8)">TLS errors that aren't</button>
+      <button type="button" onclick="goTo(9)">idle connections</button>
+      <button type="button" onclick="goTo(10)">two nginx timeouts</button>
+      <button type="button" onclick="goTo(11)">the 502 that was a deploy</button>
+      <button type="button" onclick="goTo(12)">IPv6</button>
       <button type="button" onclick="goTo(13)">Cloudflare codes</button>
       <button type="button" onclick="goTo(14)">war stories</button>
       <button type="button" onclick="goTo(15)">field guide</button>
@@ -579,213 +579,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 8: Case 6 — idle connection resets -->
+  <!-- 8: Case 6 — TLS errors that aren't -->
   <section class="slide">
-    <div class="eyebrow">08 · Case 6 · TCP</div>
-    <h2>Broken pipe on the first query after a quiet spell</h2>
-    <div class="meta"><span class="chip">service: authentication (Go)</span><span class="chip">pods 10.102.x → DB in legacy VPC 10.0.x</span><span class="chip">~2k pairs in production</span></div>
-    <div class="body">
-      <div class="term wrap">
-<div class="line out">[mysql] packets.go:155 write tcp 10.102.21.38:58948-&gt;10.0.5.86:3306: <span class="err">write: broken pipe</span></div>
-<div class="line out">connection.go:801 closing bad idle connection: <span class="err">connection reset by peer</span></div>
-<div class="line comment"># Node's version of the same thing, seen in qa this week:</div>
-<div class="line out">SequelizeDatabaseError: read <span class="err">ECONNRESET</span></div>
-      </div>
-      <div class="ask">
-        <div class="q-label">Ask the room</div>
-        <div class="q-text">DNS resolves, the port is open, and most queries work. The errors cluster on the first query after the pool has been idle a while. What's going on?</div>
-        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
-        <div class="answer">An <b>idle-timeout mismatch</b>. The pool keeps connections open longer than the database, or something in the cross-VPC path, is willing to. The far side quietly drops the idle connection. The client doesn't find out until its next write hits a dead socket: broken pipe, then reset. The Go driver retries on a fresh connection, so users mostly never notice, but the logs do. Fix it at the client by setting <code>db.SetConnMaxIdleTime()</code> and <code>SetConnMaxLifetime()</code> <b>shorter</b> than the server's <code>wait_timeout</code> and any LB or NAT idle timeout in the path.</div>
-      </div>
-      <div class="callout"><b>A case from this same week:</b> after a gateway migration, Tableau refreshes against a marketing DB failed with two look-alike errors that had two separate causes. MariaDB's <code>wait_timeout</code> was 300s, while Tableau reuses connections for 30–120 minutes. An ALB idle timeout of 60s was cutting off a 177-second refresh. The rule that fixed both: <b>every hop's idle timeout has to outlast the hop in front of it.</b> Backend keepalive should be longer than the LB idle timeout, and the LB idle timeout should be longer than the longest request.</div>
-      <div class="cmds">
-        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
-        <div class="cmds-body">
-          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
-          <div class="blackterm">
-<div class="line c"># from an authentication pod</div>
-<div class="line c"># rung 2 · port</div>
-<div class="line"><span class="p">$</span> nc -zv 10.0.5.86 3306</div>
-<div class="line">Connection to 10.0.5.86 3306 port [tcp/mysql] succeeded!</div>
-<div class="line"> </div>
-<div class="line c"># rung 4 · app: a fresh connection works...</div>
-<div class="line"><span class="p">$</span> mysql -h 10.0.5.86 -u app_srv_… -p auth</div>
-<div class="line"><span class="p">mysql&gt;</span> SELECT 1;</div>
-<div class="line">1 row in set (0.00 sec)</div>
-<div class="line"> </div>
-<div class="line c"># ...leave it idle for 15 minutes, then try again:</div>
-<div class="line"><span class="p">mysql&gt;</span> SELECT 1;</div>
-<div class="line">ERROR 2006 (HY000): MySQL server has gone away</div>
-<div class="line">No connection. Trying to reconnect...</div>
-<div class="line">Connection id:    48213</div>
-<div class="line">1 row in set (0.02 sec)</div>
-<div class="line c"># ✗ the same failure the Go driver logs, then the same silent retry</div>
-<div class="line"> </div>
-<div class="line"><span class="p">mysql&gt;</span> SHOW VARIABLES LIKE 'wait_timeout';</div>
-<div class="line">| wait_timeout  | 600   |</div>
-<div class="line c"># compare with the pool's max idle time, and with any NAT or LB idle timeout in the path</div>
-          </div>
-        </div>
-      </div>
-      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>service:authentication ("closing bad idle connection" OR "write: broken pipe")</code>, then <code>"SequelizeDatabaseError: read ECONNRESET"</code></div>
-    </div>
-  </section>
-
-  <!-- 9: Case 7 — two nginx timeouts -->
-  <section class="slide">
-    <div class="eyebrow">09 · Case 7 · TCP vs. App</div>
-    <h2>Two "upstream timed out" errors, two different rungs</h2>
-    <div class="meta"><span class="chip">apisix-internal · qa</span><span class="chip">www / apisix-public · prod</span></div>
-    <div class="body">
-      <div class="term wrap">
-<div class="line comment"># A: apisix-internal in qa, ~42 this week</div>
-<div class="line out">upstream timed out (110: Connection timed out) <span class="err">while connecting to upstream</span>, client: 10.101.22.x, request: "GET /purplewave-public/v1/excom/config", upstream: "https://10.0.0.88:443/v1/excom/config"</div>
-<div class="line comment"># B: www in prod, ~1.7k this week</div>
-<div class="line out">upstream timed out (110: Connection timed out) <span class="err">while reading response header from upstream</span>, server: www.purplewave.com</div>
-      </div>
-      <div class="ask">
-        <div class="q-label">Ask the room</div>
-        <div class="q-text">Same errno (110), same opening words. Which rung is each one on, and what's suspicious about the addresses in A?</div>
-        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
-        <div class="answer"><b>The phrase after the comma tells you which rung.</b> "While <b>connecting</b>": the SYN was never answered. That's rung 2, a security group, NACL, or route. "While <b>reading response header</b>": TCP and TLS both succeeded and the app was slow to answer. That's rung 4, so look at the app and its dependencies, not the network.
-          <p style="margin:8px 0 0;">The addresses in A: the client is <code>10.101.x</code>, the <b>QA</b> cluster, and the upstream is <code>10.0.0.88</code>, a <b>production</b> EC2 range. The security group blocking that path is doing its job. The real bug is a QA route config pointing at a prod host. It looks like a network block, but it's a config bug.</p></div>
-      </div>
-      <div class="egg"><div class="egg-label">🥚 Easter egg</div>nginx has two more upstream phrasings worth memorizing. <code>upstream prematurely closed connection while reading upstream</code> means the backend hung up mid-response, usually because it crashed or hit its own timeout. <code>no live upstreams while connecting to upstream</code> means nginx had already marked every backend as failed, so it didn't even try. That error is a downstream effect of something earlier, so look further back in the log.</div>
-      <div class="cmds">
-        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
-        <div class="cmds-body">
-          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
-          <div class="blackterm">
-<div class="line c"># A · from an apisix-internal pod in qa</div>
-<div class="line c"># rung 1 · name: nothing to resolve, because the upstream is a bare IP</div>
-<div class="line c"># rung 2 · port</div>
-<div class="line"><span class="p">$</span> nc -zv -w 5 10.0.0.88 443</div>
-<div class="line">nc: connect to 10.0.0.88 port 443 (tcp) timed out: Operation now in progress</div>
-<div class="line c"># ✗ rung 2 fails with silence: a security group, NACL, or route between QA and prod</div>
-<div class="line"> </div>
-<div class="line c"># B · www in prod</div>
-<div class="line c"># rung 3 · TLS</div>
-<div class="line"><span class="p">$</span> openssl s_client -connect www.purplewave.com:443 -servername www.purplewave.com -brief &lt;/dev/null</div>
-<div class="line">CONNECTION ESTABLISHED</div>
-<div class="line">Protocol version: TLSv1.3</div>
-<div class="line">Ciphersuite: TLS_AES_128_GCM_SHA256</div>
-<div class="line">Verification: OK</div>
-<div class="line"> </div>
-<div class="line c"># rung 4 · app, with timing for each phase</div>
-<div class="line"><span class="p">$</span> curl -s -o /dev/null -w 'connect=%{time_connect}s tls=%{time_appconnect}s first-byte=%{time_starttransfer}s code=%{http_code}\n' https://www.purplewave.com/&lt;slow-page&gt;</div>
-<div class="line">connect=0.012s tls=0.041s first-byte=60.004s code=504</div>
-<div class="line c"># ✓ rungs 1–3 finish in milliseconds. ✗ rung 4: 60 seconds waiting for the first byte.</div>
-          </div>
-        </div>
-      </div>
-      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>"upstream timed out" "while connecting"</code> vs. <code>"upstream timed out" "reading response header"</code></div>
-    </div>
-  </section>
-
-  <!-- 10: Case 8 — 502 was a deploy -->
-  <section class="slide">
-    <div class="eyebrow">10 · Case 8 · App behind a proxy</div>
-    <h2>The 502 spike that was a deploy</h2>
-    <div class="meta"><span class="chip">prod EC2 · release automation</span><span class="chip">2026-10-09 15:13–15:24 UTC</span><span class="chip">502s: ~1k/day → ~61k that day</span></div>
-    <div class="body">
-      <div class="term wrap">
-<div class="line comment"># socket-proxy access log: the symptom</div>
-<div class="line out">"GET /v2/invoices/…" <span class="err">502</span></div>
-<div class="line comment"># nginx error log, same minute: the cause</div>
-<div class="line out">[crit] connect() to unix:/var/run/workflow-service/workflow-service.sock failed (<span class="err">2: No such file or directory</span>) while connecting to upstream, server: dashboard.purplewave.com</div>
-      </div>
-      <div class="steps">
-        <button class="reveal-btn clue-btn" onclick="nextClue(this)">Next clue →</button>
-        <div class="step"><div class="step-label">Clue 1 · who said it</div>The 502 came from the <b>proxy</b>, and a 502 is the proxy reporting that the thing behind it failed. The access log only shows the symptom, so go to the proxy's <b>error</b> log for the same minute.</div>
-        <div class="step"><div class="step-label">Clue 2 · the errno sequence</div>Over the 11 minutes, the same sockets (invoice, lead, contract, commission, apf, saved-search, note) cycle through three errnos. <code>(2: No such file or directory)</code>: the socket file is gone because the process is stopped. <code>(111: Connection refused)</code>: the file is back but nothing is accepting yet. <code>(13: Permission denied)</code>: briefly recreated with the wrong owner (43 hits).</div>
-        <div class="step"><div class="step-label">Clue 3 · when</div>The window lines up exactly with a release-automation run on those hosts.</div>
-        <div class="step verdict"><div class="step-label">Verdict</div>Services were restarted in place with no draining, so nginx kept sending traffic to sockets that didn't exist yet. It's the same refused-vs-missing logic as Case 4, on a Unix socket instead of a TCP port. <b>The access log tells you that it broke. The error log tells you why.</b></div>
-      </div>
-      <div class="cmds">
-        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
-        <div class="cmds-body">
-          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
-          <div class="blackterm">
-<div class="line c"># on the EC2 host, mid-deploy</div>
-<div class="line c"># rung 4 · app, through the proxy</div>
-<div class="line"><span class="p">$</span> curl -s -o /dev/null -w '%{http_code}\n' https://dashboard.purplewave.com/v2/invoices/health</div>
-<div class="line">502</div>
-<div class="line"> </div>
-<div class="line c"># rung 2 · port: for a unix socket, nc -U replaces host:port</div>
-<div class="line"><span class="p">$</span> nc -zU /var/run/invoice-service/invoice-service.sock</div>
-<div class="line">nc: unix connect failed: No such file or directory</div>
-<div class="line c"># ✗ errno 2: the socket file doesn't exist, because the service is stopped</div>
-<div class="line"> </div>
-<div class="line c"># a few seconds later:</div>
-<div class="line"><span class="p">$</span> nc -zU /var/run/invoice-service/invoice-service.sock</div>
-<div class="line">nc: unix connect failed: Connection refused</div>
-<div class="line c"># ✗ errno 111: the file is back, and nothing is accepting yet</div>
-<div class="line"> </div>
-<div class="line"><span class="p">$</span> sudo -u nginx nc -zU /var/run/invoice-service/invoice-service.sock</div>
-<div class="line">nc: unix connect failed: Permission denied</div>
-<div class="line c"># ✗ errno 13: it works as root and fails as the nginx user, so the socket's owner is wrong</div>
-<div class="line"> </div>
-<div class="line c"># after the deploy settles:</div>
-<div class="line"><span class="p">$</span> curl -s -o /dev/null -w '%{http_code}\n' https://dashboard.purplewave.com/v2/invoices/health</div>
-<div class="line">200</div>
-          </div>
-        </div>
-      </div>
-      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>"connect() to unix" "while connecting to upstream"</code>, then <code>service:socket-proxy @http.status_code:502</code></div>
-    </div>
-  </section>
-
-  <!-- 11: Case 9 — IPv6 -->
-  <section class="slide">
-    <div class="eyebrow">11 · Case 9 · DNS meets routing</div>
-    <h2>"Network unreachable" to a site that's up</h2>
-    <div class="meta"><span class="chip">purplewave-public-proxy · staging</span><span class="chip">kargo · qa-green</span><span class="chip">steady, all week</span></div>
-    <div class="body">
-      <div class="term wrap">
-<div class="line out">connect() to [2606:4700::6812:xxxx]:443 failed (<span class="err">101: Network unreachable</span>) while connecting to upstream</div>
-<div class="line out">upstream server temporarily disabled while connecting to upstream</div>
-<div class="line out">dial tcp [2606:50c0:8000::154]:443: connect: <span class="err">network is unreachable</span>     <span class="comment"># pkg-containers.githubusercontent.com</span></div>
-      </div>
-      <div class="steps">
-        <button class="reveal-btn clue-btn" onclick="nextClue(this)">Next clue →</button>
-        <div class="step"><div class="step-label">Clue 1 · exact words</div>Errno 101 isn't refused (111) and it isn't timed out (110). The packet <b>never left the machine</b>, because the local routing table has no route to that destination at all.</div>
-        <div class="step"><div class="step-label">Clue 2 · look at the address</div>Those are IPv6 addresses (Cloudflare and GitHub). DNS returned an <code>AAAA</code> record alongside the <code>A</code> record, and the client tried IPv6 first. <code>dig AAAA host</code> and <code>ip -6 route</code> on the pod or node confirm it: there's an address, but no route to it.</div>
-        <div class="step verdict"><div class="step-label">Verdict</div>Nothing upstream is down. nginx marks the IPv6 peer as failed and falls back to IPv4, which works, so all you see is steady low-level noise. Fix it by resolving IPv4 only (nginx <code>resolver … ipv6=off;</code>), or by giving the network real IPv6. Either way, <b>the error is a rung-1 answer meeting a rung-2 limitation.</b></div>
-      </div>
-      <div class="cmds">
-        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
-        <div class="cmds-body">
-          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
-          <div class="blackterm">
-<div class="line c"># from a kargo pod</div>
-<div class="line c"># rung 1 · name: both record types come back</div>
-<div class="line"><span class="p">$</span> dig +short A pkg-containers.githubusercontent.com</div>
-<div class="line">185.199.108.154</div>
-<div class="line"> </div>
-<div class="line"><span class="p">$</span> dig +short AAAA pkg-containers.githubusercontent.com</div>
-<div class="line">2606:50c0:8000::154</div>
-<div class="line"> </div>
-<div class="line c"># rung 2 · port, IPv6 vs. IPv4</div>
-<div class="line"><span class="p">$</span> nc -6 -zv pkg-containers.githubusercontent.com 443</div>
-<div class="line">nc: connect to pkg-containers.githubusercontent.com port 443 (tcp) failed: Network is unreachable</div>
-<div class="line"> </div>
-<div class="line"><span class="p">$</span> nc -4 -zv pkg-containers.githubusercontent.com 443</div>
-<div class="line">Connection to pkg-containers.githubusercontent.com (185.199.108.154) 443 port [tcp/https] succeeded!</div>
-<div class="line"> </div>
-<div class="line c"># why v6 fails instantly:</div>
-<div class="line"><span class="p">$</span> ip -6 route</div>
-<div class="line">::1 dev lo proto kernel metric 256 pref medium</div>
-<div class="line c"># ✗ there's no IPv6 default route, only loopback. The v6 packets never leave the pod.</div>
-          </div>
-        </div>
-      </div>
-      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>"Network unreachable" OR "network is unreachable"</code></div>
-    </div>
-  </section>
-
-  <!-- 12: Case 10 — TLS errors that aren't -->
-  <section class="slide">
-    <div class="eyebrow">12 · Case 10 · TLS?</div>
+    <div class="eyebrow">08 · Case 6 · TLS?</div>
     <h2>1.27 million TLS errors, and nothing is broken</h2>
     <div class="meta"><span class="chip">kargo api · qa-green</span><span class="chip">cliquidator nginx · aws-dev</span><span class="chip rung">rung 3 · handshake (supposedly)</span></div>
     <div class="body">
@@ -836,6 +632,210 @@ table.records td code{font-size:0.86rem;}
         </div>
       </div>
       <div class="dd"><span class="dd-label">Find it in Datadog</span><code>service:kargo "TLS handshake error"</code>, grouped by the source IP in the message, then <code>service:cliquidator ("SSL_do_handshake" OR "SSL handshaking")</code> and <code>NODE_TLS_REJECT_UNAUTHORIZED</code></div>
+    </div>
+  </section>
+
+  <!-- 9: Case 7 — idle connection resets -->
+  <section class="slide">
+    <div class="eyebrow">09 · Case 7 · TCP</div>
+    <h2>Broken pipe on the first query after a quiet spell</h2>
+    <div class="meta"><span class="chip">service: authentication (Go)</span><span class="chip">pods 10.102.x → DB in legacy VPC 10.0.x</span><span class="chip">~2k pairs in production</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line out">[mysql] packets.go:155 write tcp 10.102.21.38:58948-&gt;10.0.5.86:3306: <span class="err">write: broken pipe</span></div>
+<div class="line out">connection.go:801 closing bad idle connection: <span class="err">connection reset by peer</span></div>
+<div class="line comment"># Node's version of the same thing, seen in qa this week:</div>
+<div class="line out">SequelizeDatabaseError: read <span class="err">ECONNRESET</span></div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">DNS resolves, the port is open, and most queries work. The errors cluster on the first query after the pool has been idle a while. What's going on?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">An <b>idle-timeout mismatch</b>. The pool keeps connections open longer than the database, or something in the cross-VPC path, is willing to. The far side quietly drops the idle connection. The client doesn't find out until its next write hits a dead socket: broken pipe, then reset. The Go driver retries on a fresh connection, so users mostly never notice, but the logs do. Fix it at the client by setting <code>db.SetConnMaxIdleTime()</code> and <code>SetConnMaxLifetime()</code> <b>shorter</b> than the server's <code>wait_timeout</code> and any LB or NAT idle timeout in the path.</div>
+      </div>
+      <div class="callout"><b>A case from this same week:</b> after a gateway migration, Tableau refreshes against a marketing DB failed with two look-alike errors that had two separate causes. MariaDB's <code>wait_timeout</code> was 300s, while Tableau reuses connections for 30–120 minutes. An ALB idle timeout of 60s was cutting off a 177-second refresh. The rule that fixed both: <b>every hop's idle timeout has to outlast the hop in front of it.</b> Backend keepalive should be longer than the LB idle timeout, and the LB idle timeout should be longer than the longest request.</div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># from an authentication pod</div>
+<div class="line c"># rung 2 · port</div>
+<div class="line"><span class="p">$</span> nc -zv 10.0.5.86 3306</div>
+<div class="line">Connection to 10.0.5.86 3306 port [tcp/mysql] succeeded!</div>
+<div class="line"> </div>
+<div class="line c"># rung 4 · app: a fresh connection works...</div>
+<div class="line"><span class="p">$</span> mysql -h 10.0.5.86 -u app_srv_… -p auth</div>
+<div class="line"><span class="p">mysql&gt;</span> SELECT 1;</div>
+<div class="line">1 row in set (0.00 sec)</div>
+<div class="line"> </div>
+<div class="line c"># ...leave it idle for 15 minutes, then try again:</div>
+<div class="line"><span class="p">mysql&gt;</span> SELECT 1;</div>
+<div class="line">ERROR 2006 (HY000): MySQL server has gone away</div>
+<div class="line">No connection. Trying to reconnect...</div>
+<div class="line">Connection id:    48213</div>
+<div class="line">1 row in set (0.02 sec)</div>
+<div class="line c"># ✗ the same failure the Go driver logs, then the same silent retry</div>
+<div class="line"> </div>
+<div class="line"><span class="p">mysql&gt;</span> SHOW VARIABLES LIKE 'wait_timeout';</div>
+<div class="line">| wait_timeout  | 600   |</div>
+<div class="line c"># compare with the pool's max idle time, and with any NAT or LB idle timeout in the path</div>
+          </div>
+        </div>
+      </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>service:authentication ("closing bad idle connection" OR "write: broken pipe")</code>, then <code>"SequelizeDatabaseError: read ECONNRESET"</code></div>
+    </div>
+  </section>
+
+  <!-- 10: Case 8 — two nginx timeouts -->
+  <section class="slide">
+    <div class="eyebrow">10 · Case 8 · TCP vs. App</div>
+    <h2>Two "upstream timed out" errors, two different rungs</h2>
+    <div class="meta"><span class="chip">apisix-internal · qa</span><span class="chip">www / apisix-public · prod</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line comment"># A: apisix-internal in qa, ~42 this week</div>
+<div class="line out">upstream timed out (110: Connection timed out) <span class="err">while connecting to upstream</span>, client: 10.101.22.x, request: "GET /purplewave-public/v1/excom/config", upstream: "https://10.0.0.88:443/v1/excom/config"</div>
+<div class="line comment"># B: www in prod, ~1.7k this week</div>
+<div class="line out">upstream timed out (110: Connection timed out) <span class="err">while reading response header from upstream</span>, server: www.purplewave.com</div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">Same errno (110), same opening words. Which rung is each one on, and what's suspicious about the addresses in A?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer"><b>The phrase after the comma tells you which rung.</b> "While <b>connecting</b>": the SYN was never answered. That's rung 2, a security group, NACL, or route. "While <b>reading response header</b>": TCP and TLS both succeeded and the app was slow to answer. That's rung 4, so look at the app and its dependencies, not the network.
+          <p style="margin:8px 0 0;">The addresses in A: the client is <code>10.101.x</code>, the <b>QA</b> cluster, and the upstream is <code>10.0.0.88</code>, a <b>production</b> EC2 range. The security group blocking that path is doing its job. The real bug is a QA route config pointing at a prod host. It looks like a network block, but it's a config bug.</p></div>
+      </div>
+      <div class="egg"><div class="egg-label">🥚 Easter egg</div>nginx has two more upstream phrasings worth memorizing. <code>upstream prematurely closed connection while reading upstream</code> means the backend hung up mid-response, usually because it crashed or hit its own timeout. <code>no live upstreams while connecting to upstream</code> means nginx had already marked every backend as failed, so it didn't even try. That error is a downstream effect of something earlier, so look further back in the log.</div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># A · from an apisix-internal pod in qa</div>
+<div class="line c"># rung 1 · name: nothing to resolve, because the upstream is a bare IP</div>
+<div class="line c"># rung 2 · port</div>
+<div class="line"><span class="p">$</span> nc -zv -w 5 10.0.0.88 443</div>
+<div class="line">nc: connect to 10.0.0.88 port 443 (tcp) timed out: Operation now in progress</div>
+<div class="line c"># ✗ rung 2 fails with silence: a security group, NACL, or route between QA and prod</div>
+<div class="line"> </div>
+<div class="line c"># B · www in prod</div>
+<div class="line c"># rung 3 · TLS</div>
+<div class="line"><span class="p">$</span> openssl s_client -connect www.purplewave.com:443 -servername www.purplewave.com -brief &lt;/dev/null</div>
+<div class="line">CONNECTION ESTABLISHED</div>
+<div class="line">Protocol version: TLSv1.3</div>
+<div class="line">Ciphersuite: TLS_AES_128_GCM_SHA256</div>
+<div class="line">Verification: OK</div>
+<div class="line"> </div>
+<div class="line c"># rung 4 · app, with timing for each phase</div>
+<div class="line"><span class="p">$</span> curl -s -o /dev/null -w 'connect=%{time_connect}s tls=%{time_appconnect}s first-byte=%{time_starttransfer}s code=%{http_code}\n' https://www.purplewave.com/&lt;slow-page&gt;</div>
+<div class="line">connect=0.012s tls=0.041s first-byte=60.004s code=504</div>
+<div class="line c"># ✓ rungs 1–3 finish in milliseconds. ✗ rung 4: 60 seconds waiting for the first byte.</div>
+          </div>
+        </div>
+      </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>"upstream timed out" "while connecting"</code> vs. <code>"upstream timed out" "reading response header"</code></div>
+    </div>
+  </section>
+
+  <!-- 11: Case 9 — 502 was a deploy -->
+  <section class="slide">
+    <div class="eyebrow">11 · Case 9 · App behind a proxy</div>
+    <h2>The 502 spike that was a deploy</h2>
+    <div class="meta"><span class="chip">prod EC2 · release automation</span><span class="chip">2026-10-09 15:13–15:24 UTC</span><span class="chip">502s: ~1k/day → ~61k that day</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line comment"># socket-proxy access log: the symptom</div>
+<div class="line out">"GET /v2/invoices/…" <span class="err">502</span></div>
+<div class="line comment"># nginx error log, same minute: the cause</div>
+<div class="line out">[crit] connect() to unix:/var/run/workflow-service/workflow-service.sock failed (<span class="err">2: No such file or directory</span>) while connecting to upstream, server: dashboard.purplewave.com</div>
+      </div>
+      <div class="steps">
+        <button class="reveal-btn clue-btn" onclick="nextClue(this)">Next clue →</button>
+        <div class="step"><div class="step-label">Clue 1 · who said it</div>The 502 came from the <b>proxy</b>, and a 502 is the proxy reporting that the thing behind it failed. The access log only shows the symptom, so go to the proxy's <b>error</b> log for the same minute.</div>
+        <div class="step"><div class="step-label">Clue 2 · the errno sequence</div>Over the 11 minutes, the same sockets (invoice, lead, contract, commission, apf, saved-search, note) cycle through three errnos. <code>(2: No such file or directory)</code>: the socket file is gone because the process is stopped. <code>(111: Connection refused)</code>: the file is back but nothing is accepting yet. <code>(13: Permission denied)</code>: briefly recreated with the wrong owner (43 hits).</div>
+        <div class="step"><div class="step-label">Clue 3 · when</div>The window lines up exactly with a release-automation run on those hosts.</div>
+        <div class="step verdict"><div class="step-label">Verdict</div>Services were restarted in place with no draining, so nginx kept sending traffic to sockets that didn't exist yet. It's the same refused-vs-missing logic as Case 4, on a Unix socket instead of a TCP port. <b>The access log tells you that it broke. The error log tells you why.</b></div>
+      </div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># on the EC2 host, mid-deploy</div>
+<div class="line c"># rung 4 · app, through the proxy</div>
+<div class="line"><span class="p">$</span> curl -s -o /dev/null -w '%{http_code}\n' https://dashboard.purplewave.com/v2/invoices/health</div>
+<div class="line">502</div>
+<div class="line"> </div>
+<div class="line c"># rung 2 · port: for a unix socket, nc -U replaces host:port</div>
+<div class="line"><span class="p">$</span> nc -zU /var/run/invoice-service/invoice-service.sock</div>
+<div class="line">nc: unix connect failed: No such file or directory</div>
+<div class="line c"># ✗ errno 2: the socket file doesn't exist, because the service is stopped</div>
+<div class="line"> </div>
+<div class="line c"># a few seconds later:</div>
+<div class="line"><span class="p">$</span> nc -zU /var/run/invoice-service/invoice-service.sock</div>
+<div class="line">nc: unix connect failed: Connection refused</div>
+<div class="line c"># ✗ errno 111: the file is back, and nothing is accepting yet</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> sudo -u nginx nc -zU /var/run/invoice-service/invoice-service.sock</div>
+<div class="line">nc: unix connect failed: Permission denied</div>
+<div class="line c"># ✗ errno 13: it works as root and fails as the nginx user, so the socket's owner is wrong</div>
+<div class="line"> </div>
+<div class="line c"># after the deploy settles:</div>
+<div class="line"><span class="p">$</span> curl -s -o /dev/null -w '%{http_code}\n' https://dashboard.purplewave.com/v2/invoices/health</div>
+<div class="line">200</div>
+          </div>
+        </div>
+      </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>"connect() to unix" "while connecting to upstream"</code>, then <code>service:socket-proxy @http.status_code:502</code></div>
+    </div>
+  </section>
+
+  <!-- 12: Case 10 — IPv6 -->
+  <section class="slide">
+    <div class="eyebrow">12 · Case 10 · DNS meets routing</div>
+    <h2>"Network unreachable" to a site that's up</h2>
+    <div class="meta"><span class="chip">purplewave-public-proxy · staging</span><span class="chip">kargo · qa-green</span><span class="chip">steady, all week</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line out">connect() to [2606:4700::6812:xxxx]:443 failed (<span class="err">101: Network unreachable</span>) while connecting to upstream</div>
+<div class="line out">upstream server temporarily disabled while connecting to upstream</div>
+<div class="line out">dial tcp [2606:50c0:8000::154]:443: connect: <span class="err">network is unreachable</span>     <span class="comment"># pkg-containers.githubusercontent.com</span></div>
+      </div>
+      <div class="steps">
+        <button class="reveal-btn clue-btn" onclick="nextClue(this)">Next clue →</button>
+        <div class="step"><div class="step-label">Clue 1 · exact words</div>Errno 101 isn't refused (111) and it isn't timed out (110). The packet <b>never left the machine</b>, because the local routing table has no route to that destination at all.</div>
+        <div class="step"><div class="step-label">Clue 2 · look at the address</div>Those are IPv6 addresses (Cloudflare and GitHub). DNS returned an <code>AAAA</code> record alongside the <code>A</code> record, and the client tried IPv6 first. <code>dig AAAA host</code> and <code>ip -6 route</code> on the pod or node confirm it: there's an address, but no route to it.</div>
+        <div class="step verdict"><div class="step-label">Verdict</div>Nothing upstream is down. nginx marks the IPv6 peer as failed and falls back to IPv4, which works, so all you see is steady low-level noise. Fix it by resolving IPv4 only (nginx <code>resolver … ipv6=off;</code>), or by giving the network real IPv6. Either way, <b>the error is a rung-1 answer meeting a rung-2 limitation.</b></div>
+      </div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># from a kargo pod</div>
+<div class="line c"># rung 1 · name: both record types come back</div>
+<div class="line"><span class="p">$</span> dig +short A pkg-containers.githubusercontent.com</div>
+<div class="line">185.199.108.154</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> dig +short AAAA pkg-containers.githubusercontent.com</div>
+<div class="line">2606:50c0:8000::154</div>
+<div class="line"> </div>
+<div class="line c"># rung 2 · port, IPv6 vs. IPv4</div>
+<div class="line"><span class="p">$</span> nc -6 -zv pkg-containers.githubusercontent.com 443</div>
+<div class="line">nc: connect to pkg-containers.githubusercontent.com port 443 (tcp) failed: Network is unreachable</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> nc -4 -zv pkg-containers.githubusercontent.com 443</div>
+<div class="line">Connection to pkg-containers.githubusercontent.com (185.199.108.154) 443 port [tcp/https] succeeded!</div>
+<div class="line"> </div>
+<div class="line c"># why v6 fails instantly:</div>
+<div class="line"><span class="p">$</span> ip -6 route</div>
+<div class="line">::1 dev lo proto kernel metric 256 pref medium</div>
+<div class="line c"># ✗ there's no IPv6 default route, only loopback. The v6 packets never leave the pod.</div>
+          </div>
+        </div>
+      </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>"Network unreachable" OR "network is unreachable"</code></div>
     </div>
   </section>
 
@@ -891,7 +891,7 @@ table.records td code{font-size:0.86rem;}
   </section>
 
   <!-- 14: War stories -->
-  <section class="slide">
+  <section class="slide" id="war-stories">
     <div class="eyebrow">14 · Lightning round</div>
     <h2>War stories: the symptom said one layer</h2>
     <p class="sub">Real incidents from the last six months. Guess the rung from the symptom, then reveal what it actually was.</p>
@@ -1061,6 +1061,10 @@ function nextClue(btn){
 document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight' || e.key === ' ') go(1);
   if (e.key === 'ArrowLeft') go(-1);
+  // W jumps straight to the war stories (for when time is running short)
+  if ((e.key === 'w' || e.key === 'W') && !e.ctrlKey && !e.metaKey && !e.altKey){
+    goTo([...slides].indexOf(document.getElementById('war-stories')));
+  }
 });
 render();
 </script>
