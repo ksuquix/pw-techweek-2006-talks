@@ -299,13 +299,7 @@ table.records td code{font-size:0.86rem;}
         <div class="col panel"><div class="panel-title">3. Which rung of the ladder?</div>Name, port, handshake, or app. The wording almost always tells you, once you know the decoder (two slides on).</div>
         <div class="col panel"><div class="panel-title">4. When, and how wide?</div>One service or thirty? One pod or every node? Starting at a deploy, or at a steady rate for weeks? Blast radius points at the shared dependency.</div>
       </div>
-      <div class="path">
-        <div class="node">1 · name resolves?</div><span class="arrow">→</span>
-        <div class="node">2 · port accepts a connection (or gets packets at all)?</div><span class="arrow">→</span>
-        <div class="node">3 · TLS handshakes?</div><span class="arrow">→</span>
-        <div class="node hot">4 · app answers?</div>
-      </div>
-      <div class="callout">That's the debugging ladder from <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tcp-deck.html" target="_blank" rel="noopener">Connectivity in Depth</a>, in full on the next slide. Once you've placed the error on a rung, test <b>that rung</b>, from <b>the same place</b> the error came from: the same pod, the same box, the same network path.</div>
+      <div class="callout">The rungs are the debugging ladder from <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tcp-deck.html" target="_blank" rel="noopener">Connectivity in Depth</a>, on the next slide. Once you've placed the error on a rung, test <b>that rung</b>, from <b>the same place</b> the error came from: the same pod, the same box, the same network path.</div>
       <div class="egg"><div class="egg-label">🥚 Easter egg</div>Datadog keeps about <b>7 days</b> of logs searchable, so every case here is from the week of October 5–12, 2026. Nothing was cherry-picked from years of history. This is what a normal week looks like.</div>
     </div>
   </section>
