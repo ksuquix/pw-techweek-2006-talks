@@ -19,6 +19,14 @@ line: (1) DNS / connectivity to DNS, (2) Networking / Security / App actually ru
 config / mismatch, (4) app logic / proxy config. Rung 2's title is "Is the connection accepted /
 refused / reset / timed out?"
 
+**Fit to window (all four decks).** A shared `fit()` in each deck's script sets CSS `zoom` on
+`.deck` to the largest scale that fits the window: `min(width fit, height fit, 2.5)`, never below 1,
+so phones and small windows are unchanged. It re-runs on slide change, window resize, font load,
+and after any button click (reveals). As a result, a slide shrinks back toward 1× as revealed
+content makes it taller. The fixed `.navbar` sits *outside* `.deck` so the zoom doesn't move or
+scale it. **F** toggles true browser fullscreen; browsers only allow that from a keypress or
+click, so it can't be the default.
+
 **Publishing is two steps.** (1) Republish the artifact. (2) Commit, and merge to `main`. GitHub
 Pages builds from `main` at the repo root (legacy Jekyll build), so github.io only changes once
 the change lands on `main`. Work on a branch and merge via PR, matching the repo history.
