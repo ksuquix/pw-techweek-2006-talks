@@ -895,18 +895,87 @@ table.records td code{font-size:0.86rem;}
       <div class="ask">
         <div class="q-label">Symptom</div>
         <div class="q-text">A service starts returning 504 Gateway Timeout. Nobody deployed it. It works in qa and staging.</div>
+        <div class="cmds" style="margin-bottom:10px;">
+          <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+          <div class="cmds-body">
+            <div class="cmds-note">Testing commands · illustrative output</div>
+            <div class="blackterm">
+<div class="line"><span class="p">$</span> printenv UPSTREAM_URL</div>
+<div class="line">http://api-gw.purplewave.com:3156</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> dig +short api-gw.purplewave.com</div>
+<div class="line">prod-nlb-xxxxxxxx.elb.us-east-1.amazonaws.com.</div>
+<div class="line">10.0.3.41</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> nc -zv -w 5 api-gw.purplewave.com 3156</div>
+<div class="line">nc: connect to api-gw.purplewave.com (10.0.3.41) port 3156 (tcp) timed out: Operation now in progress</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> nc -zv api-gw.purplewave.com 443</div>
+<div class="line">Connection to api-gw.purplewave.com (10.0.3.41) 443 port [tcp/https] succeeded!</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> curl -s -o /dev/null -w '%{http_code} %{time_total}s\n' https://app.purplewave.com/&lt;endpoint&gt;</div>
+<div class="line">504 60.01s</div>
+            </div>
+          </div>
+        </div>
         <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal</button>
         <div class="answer"><b>Rung 1, then 2.</b> An env var still pointed at an old hostname on a nonstandard port. That name had since been moved, in DNS, to a different NLB, and the prod NLB had <b>no listener on that port</b>. qa and staging had been set up differently, which is why they worked. Unrelated changes to DNS and the load balancer, a config nobody touched, and a gateway reporting the result.</div>
       </div>
       <div class="ask">
         <div class="q-label">Symptom</div>
         <div class="q-text">Customer-facing pages break right after a team deploys an unrelated internal tool to Kubernetes.</div>
+        <div class="cmds" style="margin-bottom:10px;">
+          <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+          <div class="cmds-body">
+            <div class="cmds-note">Testing commands · illustrative output</div>
+            <div class="blackterm">
+<div class="line"><span class="p">$</span> dig +short www.purplewave.com</div>
+<div class="line">k8s-shared-xxxxxxxx.us-east-1.elb.amazonaws.com.</div>
+<div class="line">3.x.x.x</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> nc -zv www.purplewave.com 443</div>
+<div class="line">Connection to www.purplewave.com (3.x.x.x) 443 port [tcp/https] succeeded!</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> curl -sI http://www.purplewave.com/</div>
+<div class="line">HTTP/1.1 301 Moved Permanently</div>
+<div class="line">Location: https://www.purplewave.com:443/</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> openssl s_client -connect www.purplewave.com:443 -servername www.purplewave.com -verify_hostname www.purplewave.com -brief &lt;/dev/null</div>
+<div class="line">CONNECTION ESTABLISHED</div>
+<div class="line">Protocol version: TLSv1.2</div>
+<div class="line">Peer certificate: CN = tools.purplewave.com</div>
+<div class="line">Verification error: hostname mismatch</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> curl -s -o /dev/null https://www.purplewave.com/</div>
+<div class="line">curl: (60) SSL: no alternative certificate subject name matches target host name 'www.purplewave.com'</div>
+            </div>
+          </div>
+        </div>
         <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal</button>
         <div class="answer"><b>Rung 3, caused by a config change.</b> The new Ingress joined a <b>shared ALB ingress group</b> and brought an HTTP→HTTPS redirect rule with it. The redirect then failed TLS on a <b>hostname mismatch</b>. It was a Kubernetes manifest change, showing up as a certificate error on someone else's site.</div>
       </div>
       <div class="ask">
         <div class="q-label">Symptom</div>
         <div class="q-text">After rolling back one service, a different service that depends on it stops working entirely.</div>
+        <div class="cmds" style="margin-bottom:10px;">
+          <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+          <div class="cmds-body">
+            <div class="cmds-note">Testing commands · illustrative output</div>
+            <div class="blackterm">
+<div class="line"><span class="p">$</span> kubectl -n production exec deploy/bid-service -- printenv AUCTION_SERVICE_URL</div>
+<div class="line">http://auction-service-v2.production.svc.cluster.local:8080</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> kubectl -n production exec deploy/bid-service -- dig auction-service-v2.production.svc.cluster.local | grep status</div>
+<div class="line">;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NXDOMAIN, id: 33012</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> kubectl -n production get svc | grep auction</div>
+<div class="line">auction-service   ClusterIP   172.20.48.17   &lt;none&gt;   8080/TCP   212d</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> kubectl -n production exec deploy/bid-service -- nc -zv auction-service.production.svc.cluster.local 8080</div>
+<div class="line">Connection to auction-service.production.svc.cluster.local (172.20.48.17) 8080 port [tcp/http-alt] succeeded!</div>
+            </div>
+          </div>
+        </div>
         <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal</button>
         <div class="answer"><b>Rung 1 or 2, caused by service discovery.</b> The dependent service was still configured with the in-cluster URL from the newer version. After the rollback, nothing was answering at that name. The name in the config is the name that gets used, the same lesson as Case 2.</div>
       </div>

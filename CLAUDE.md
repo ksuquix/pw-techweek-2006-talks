@@ -621,7 +621,9 @@ Identical tokens, fonts, and base components to the other decks (CSS copied from
     `NODE_TLS_REJECT_UNAUTHORIZED=0` warning, linked to the TLS deck.
 13. **Case 11, Cloudflare codes** (table + ask): 530/521/522/524/520 mapped to rungs. The 35.7k 522s
     come from abandoned staging DNS records probed by bots, with a subdomain-takeover angle.
-14. **War stories** (three symptom → reveal cards)
+14. **War stories**: three cards, each symptom → "Reveal testing commands" → answer reveal. The
+    command boxes here are deliberately bare, commands and output only, with no `# ✓`/`# ✗` or
+    rung comments, so the room reads the output and names the rung before the answer is shown.
 15. **Wrap-up, the field guide**: four lessons, a "try it yourself" callout, links to the other
     three decks, and the QR code ("All four talks")
 
