@@ -630,6 +630,9 @@ Identical tokens, fonts, and base components to the other decks (CSS copied from
 ## Time budget
 
 Same 55-minute target. Seven slides carry an ask-the-room, four carry step-through clues, and
-the war-stories slide has three quick reveals. The rough estimate is **~55–65 minutes**, with no
-rehearsal yet. Cut candidates if it runs long: Case 9 (IPv6) and Case 11 (Cloudflare) are the
-most self-contained, and Case 5 can be narrated in one breath right after Case 4.
+the war-stories slide has three cards (symptom → commands → answer). Since the "Reveal testing
+commands" boxes were added to every case, the estimate is **~65–75 minutes if every box is walked
+line by line**, or **~55–60 if they're opened and skimmed in about 30 seconds each**. There's no
+rehearsal yet. Cut candidates if it runs long: Case 9 (IPv6) and Case 11 (Cloudflare) are the most
+self-contained, Case 5 can be narrated in one breath right after Case 4, and the war stories can
+drop to two cards.
