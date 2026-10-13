@@ -135,6 +135,9 @@ table.records th{font-family:"IBM Plex Sans"; color:var(--muted); text-transform
 }
 .tag.beginner{background:var(--good-bg); color:var(--accent);}
 .tag.deep{background:var(--danger-bg); color:var(--danger);}
+.panel.rung{display:flex; flex-direction:column; gap:8px;}
+.panel.rung .panel-title{margin-bottom:0;}
+.panel.rung .look{margin-top:auto; padding-top:8px; border-top:1px solid var(--line); font-size:0.85rem; font-weight:600; color:var(--accent);}
 .callout{
   border-left:3px solid var(--accent); padding:10px 14px; background:var(--surface-2); border-radius:0 8px 8px 0;
   font-size:0.9rem; color:var(--muted);
@@ -311,12 +314,12 @@ table.records td code{font-size:0.86rem;}
     <p class="sub">From <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tcp-deck.html" target="_blank" rel="noopener">Connectivity in Depth</a>. Isolate which layer is actually failing before assuming the whole network is broken. Each rung has its own tool.</p>
     <div class="body">
       <div class="row">
-        <div class="col panel"><div class="panel-title">1. Does the name resolve?</div><code>dig</code> / <code>nslookup</code> — <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/dns-deck.html" target="_blank" rel="noopener">DNS in Depth</a> territory.</div>
-        <div class="col panel"><div class="panel-title">2. Does the port accept a connection (or get packets at all)?</div><code>nc -zv</code> / <code>Test-NetConnection</code> — plain TCP, no app layer at all.</div>
+        <div class="col panel rung"><div class="panel-title">1. Does the name resolve?</div><div><code>dig</code> / <code>nslookup</code> — <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/dns-deck.html" target="_blank" rel="noopener">DNS in Depth</a> territory.</div><div class="look">Look at DNS / connectivity to DNS</div></div>
+        <div class="col panel rung"><div class="panel-title">2. Is the connection accepted / refused / reset / timed out?</div><div><code>nc -zv</code> / <code>Test-NetConnection</code> — plain TCP, no app layer at all.</div><div class="look">Look at Networking / Security / App actually running</div></div>
       </div>
       <div class="row">
-        <div class="col panel"><div class="panel-title">3. Does the TLS handshake succeed?</div><code>openssl s_client</code> — <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tls-deck.html" target="_blank" rel="noopener">TLS in Depth</a> territory.</div>
-        <div class="col panel"><div class="panel-title">4. Does the application actually respond?</div><code>curl</code> with the real request — the first layer where app logic, not networking, can be the cause.</div>
+        <div class="col panel rung"><div class="panel-title">3. Does the TLS handshake succeed?</div><div><code>openssl s_client</code> — <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tls-deck.html" target="_blank" rel="noopener">TLS in Depth</a> territory.</div><div class="look">Look at TLS config / mismatch</div></div>
+        <div class="col panel rung"><div class="panel-title">4. Does the application actually respond?</div><div><code>curl</code> with the real request — the first layer where app logic, not networking, can be the cause.</div><div class="look">Look at app logic / proxy config</div></div>
       </div>
       <div class="callout">You can usually start anywhere on the ladder, but let the errors and messages you get point you toward the next place to look.</div>
       <div class="egg"><div class="egg-label">Presenter shortcut</div>Press <kbd>L</kbd> on any slide to pop over to this ladder, then <kbd>L</kbd> again to jump back to where you were.</div>

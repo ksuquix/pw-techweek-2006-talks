@@ -13,6 +13,12 @@ That page is `README.md` rendered by Pages, and its deck links are absolute gith
 Keep all of these in sync whenever a deck's title, file name, or wrap-up slide changes. See
 each section below for the deck specific to it.
 
+**The debugging ladder appears in two decks**: the Connectivity deck's wrap-up and slide 2 of
+Connectivity Errors. Keep them identical. Each rung is a `.panel.rung` with a "Look at …" bottom
+line: (1) DNS / connectivity to DNS, (2) Networking / Security / App actually running, (3) TLS
+config / mismatch, (4) app logic / proxy config. Rung 2's title is "Is the connection accepted /
+refused / reset / timed out?"
+
 **Publishing is two steps.** (1) Republish the artifact. (2) Commit, and merge to `main`. GitHub
 Pages builds from `main` at the repo root (legacy Jekyll build), so github.io only changes once
 the change lands on `main`. Work on a branch and merge via PR, matching the repo history.
@@ -454,7 +460,7 @@ a small legend for this in the diagram's upper-right corner.
    error point you toward the right layer; and a fifth bullet noting Claude itself is
    genuinely good at poking around and finding where things stop matching up, given access)
 10. **The debugging ladder** (wrap-up) — four rungs: does the name resolve (`dig`/`nslookup`,
-    linked to DNS in Depth), does the port accept a connection (or get packets at all) (`nc -zv`/`Test-NetConnection`),
+    linked to DNS in Depth), is the connection accepted / refused / reset / timed out (`nc -zv`/`Test-NetConnection`),
     does the TLS handshake succeed (`openssl s_client`, linked to TLS in Depth), does the app
     actually respond (`curl` with the real request); callout that you can start anywhere on the
     ladder but let the errors/messages guide the next move; + a "Check out the others in this
@@ -587,13 +593,12 @@ Identical tokens, fonts, and base components to the other decks (CSS copied from
 
 0. **Title**: eyebrow is just "Don Eisele, Platform Engineering" (no Tech Week label or badge),
    topic chips (`goTo(i)`), and the same presenter-bio callout
-1. **How to work a case**: rung 2 is worded "port accepts a connection (or gets packets at all)?"
-   to match the Connectivity deck's ladder. Four questions (exact words / who said it / which rung / when and how
+1. **How to work a case**: four questions (exact words / who said it / which rung / when and how
    wide), plus a callout pointing to the ladder on the next slide (the old inline `.path` ladder row
    was trimmed). The egg covers the 7-day retention: "this is a normal week."
 2. **The debugging ladder** (`id="ladder"`): the four rungs from Connectivity in Depth's wrap-up
-   (dig / nc / openssl s_client / curl, rung 2 worded "or get packets at all"), with links to the
-   other three decks. A presenter egg notes the **L** toggle: press L anywhere to jump here, and L
+   (dig / nc / openssl s_client / curl; rung 2 is worded "Is the connection accepted / refused / reset /
+   timed out?"), with links to the other three decks. A presenter egg notes the **L** toggle: press L anywhere to jump here, and L
    again to return to the slide you came from. Arrow-key or dot navigation clears the return point.
 3. **The decoder**: table mapping each rung/failure to its Node / Go / nginx(errno) wording, plus
    a warning callout that Go's `i/o timeout` appears on both the DNS rung and the TCP rung
