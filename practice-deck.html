@@ -480,6 +480,7 @@ table.records td code{font-size:0.86rem;}
           </div>
         </div>
       </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>kube_cluster_name:qa-green ("EAI_AGAIN" OR "no such host" OR "i/o timeout")</code>, window 2026-10-09 22:00–23:00 UTC</div>
     </div>
   </section>
 
@@ -574,6 +575,7 @@ table.records td code{font-size:0.86rem;}
           </div>
         </div>
       </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>env:qa ("Too many connections" OR "Access denied for user")</code>, window 2026-10-10</div>
     </div>
   </section>
 
@@ -625,6 +627,7 @@ table.records td code{font-size:0.86rem;}
           </div>
         </div>
       </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>service:authentication ("closing bad idle connection" OR "write: broken pipe")</code>, then <code>"SequelizeDatabaseError: read ECONNRESET"</code></div>
     </div>
   </section>
 
@@ -644,7 +647,7 @@ table.records td code{font-size:0.86rem;}
         <div class="q-label">Ask the room</div>
         <div class="q-text">Same errno (110), same opening words. Which rung is each one on, and what's suspicious about the addresses in A?</div>
         <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
-        <div class="answer"><b>The phrase after the comma is the whole diagnosis.</b> "While <b>connecting</b>": the SYN was never answered. That's rung 2, a security group, NACL, or route. "While <b>reading response header</b>": TCP and TLS both succeeded and the app was slow to answer. That's rung 4, so look at the app and its dependencies, not the network.
+        <div class="answer"><b>The phrase after the comma tells you which rung.</b> "While <b>connecting</b>": the SYN was never answered. That's rung 2, a security group, NACL, or route. "While <b>reading response header</b>": TCP and TLS both succeeded and the app was slow to answer. That's rung 4, so look at the app and its dependencies, not the network.
           <p style="margin:8px 0 0;">The addresses in A: the client is <code>10.101.x</code>, the <b>QA</b> cluster, and the upstream is <code>10.0.0.88</code>, a <b>production</b> EC2 range. The security group blocking that path is doing its job. The real bug is a QA route config pointing at a prod host. It looks like a network block, but it's a config bug.</p></div>
       </div>
       <div class="egg"><div class="egg-label">🥚 Easter egg</div>nginx has two more upstream phrasings worth memorizing. <code>upstream prematurely closed connection while reading upstream</code> means the backend hung up mid-response, usually because it crashed or hit its own timeout. <code>no live upstreams while connecting to upstream</code> means nginx had already marked every backend as failed, so it didn't even try. That error is a downstream effect of something earlier, so look further back in the log.</div>
@@ -832,6 +835,7 @@ table.records td code{font-size:0.86rem;}
           </div>
         </div>
       </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>service:kargo "TLS handshake error"</code>, grouped by the source IP in the message, then <code>service:cliquidator ("SSL_do_handshake" OR "SSL handshaking")</code> and <code>NODE_TLS_REJECT_UNAUTHORIZED</code></div>
     </div>
   </section>
 
