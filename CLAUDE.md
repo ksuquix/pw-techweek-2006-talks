@@ -589,7 +589,8 @@ Identical tokens, fonts, and base components to the other decks (CSS copied from
    topic chips (`goTo(i)`), and the same presenter-bio callout
 1. **How to work a case**: rung 2 is worded "port accepts a connection (or gets packets at all)?"
    to match the Connectivity deck's ladder. Four questions (exact words / who said it / which rung / when and how
-   wide), plus the ladder as a `.path`. The egg covers the 7-day retention: "this is a normal week."
+   wide), plus a callout pointing to the ladder on the next slide (the old inline `.path` ladder row
+   was trimmed). The egg covers the 7-day retention: "this is a normal week."
 2. **The debugging ladder** (`id="ladder"`): the four rungs from Connectivity in Depth's wrap-up
    (dig / nc / openssl s_client / curl, rung 2 worded "or get packets at all"), with links to the
    other three decks. A presenter egg notes the **L** toggle: press L anywhere to jump here, and L
