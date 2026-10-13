@@ -1032,13 +1032,14 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <div class="navbar">
-    <button class="navbtn" id="prevBtn" onclick="go(-1)">← Prev</button>
-    <div class="dots" id="dots"></div>
-    <img class="navbar-logo" src="assets/pw-logo.png" alt="Purple Wave">
-    <span class="counter" id="counter"></span>
-    <button class="navbtn" id="nextBtn" onclick="go(1)">Next →</button>
-  </div>
+</div>
+
+<div class="navbar">
+  <button class="navbtn" id="prevBtn" onclick="go(-1)">← Prev</button>
+  <div class="dots" id="dots"></div>
+  <img class="navbar-logo" src="assets/pw-logo.png" alt="Purple Wave">
+  <span class="counter" id="counter"></span>
+  <button class="navbtn" id="nextBtn" onclick="go(1)">Next →</button>
 </div>
 
 <script>
@@ -1051,12 +1052,25 @@ slides.forEach((_, i) => {
   d.onclick = () => { idx = i; ladderReturn = null; render(); };
   dotsEl.appendChild(d);
 });
+// Scale the deck up to fill the window (never below its designed size, so phones are unchanged).
+// Re-run whenever the slide, the window, or a reveal changes the content's size.
+const deckEl = document.querySelector('.deck');
+function fit(){
+  deckEl.style.zoom = 1;
+  const byWidth = (window.innerWidth - 32) / deckEl.offsetWidth;
+  const byHeight = (window.innerHeight - 118) / deckEl.offsetHeight;
+  deckEl.style.zoom = Math.max(1, Math.min(byWidth, byHeight, 2.5));
+}
+window.addEventListener('resize', fit);
+document.addEventListener('click', e => { if (e.target.closest('button')) requestAnimationFrame(fit); });
+if (document.fonts) document.fonts.ready.then(fit);
 function render(){
   slides.forEach((s,i) => s.classList.toggle('active', i === idx));
   document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i === idx));
   document.getElementById('counter').textContent = (idx+1) + ' / ' + slides.length;
   document.getElementById('prevBtn').disabled = idx === 0;
   document.getElementById('nextBtn').disabled = idx === slides.length - 1;
+  fit();
 }
 // Slide to return to when L is pressed again on the ladder; any normal navigation clears it.
 let ladderReturn = null;
@@ -1090,6 +1104,11 @@ document.addEventListener('keydown', e => {
     const ladder = [...slides].indexOf(document.getElementById('ladder'));
     if (idx !== ladder){ const from = idx; goTo(ladder); ladderReturn = from; }
     else if (ladderReturn !== null){ const back = ladderReturn; ladderReturn = null; goTo(back); }
+  }
+  // F toggles true browser fullscreen (browsers only allow it from a keypress or click)
+  if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey){
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+    else document.exitFullscreen();
   }
 });
 render();
