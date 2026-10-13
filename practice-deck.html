@@ -1,0 +1,993 @@
+<!--    Direct URL:   https://ksuquix.github.io/pw-techweek-2006-talks/practice-deck.html    -->
+<title>Connectivity Errors: Reading the Tea Leaves</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f3f0f8;
+  --surface:#ffffff;
+  --surface-2:#e8e2f2;
+  --ink:#231f20;
+  --muted:#6b6270;
+  --line:#d6cee3;
+  --accent:#4f2682;
+  --accent-ink:#ffffff;
+  --accent-2:#9c7a1b;
+  --accent-2-ink:#ffffff;
+  --danger:#c94a43;
+  --danger-bg:#f7e3e1;
+  --good-bg:#e3f2e4;
+  --shadow: rgba(20,30,26,0.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c0f2e;
+    --surface:#271640;
+    --surface-2:#33204f;
+    --ink:#f2ecf7;
+    --muted:#b3a3c9;
+    --line:#4a2f6e;
+    --accent:#b89bdc;
+    --accent-ink:#1c0f2e;
+    --accent-2:#e5c558;
+    --accent-2-ink:#2e2205;
+    --danger:#e98b85;
+    --danger-bg:#3a1f22;
+    --good-bg:#1f3324;
+    --shadow: rgba(0,0,0,0.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c0f2e;
+  --surface:#271640;
+  --surface-2:#33204f;
+  --ink:#f2ecf7;
+  --muted:#b3a3c9;
+  --line:#4a2f6e;
+  --accent:#b89bdc;
+  --accent-ink:#1c0f2e;
+  --accent-2:#e5c558;
+  --accent-2-ink:#2e2205;
+  --danger:#e98b85;
+  --danger-bg:#3a1f22;
+  --good-bg:#1f3324;
+  --shadow: rgba(0,0,0,0.4);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:28px 16px 90px;
+}
+h1,h2,h3{font-family:"Manrope", ui-sans-serif, system-ui, sans-serif; text-wrap:balance; margin:0;}
+code, .mono, .rec-val, kbd{font-family:"IBM Plex Mono", ui-monospace, monospace;}
+.deck{width:100%; max-width:920px;}
+.chrome{
+  display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;
+  color:var(--muted); font-size:0.78rem; letter-spacing:0.06em; text-transform:uppercase;
+}
+.chrome .brand{color:var(--accent); font-weight:600;}
+.slide{
+  background:var(--surface); border:1px solid var(--line); border-radius:14px;
+  padding:44px 48px; min-height:520px; box-shadow:0 12px 30px var(--shadow);
+  display:none; flex-direction:column; gap:18px; position:relative; overflow:hidden;
+}
+.slide.active{display:flex;}
+.eyebrow{font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); font-weight:600;}
+.eyebrow::before{content:"\25C6"; margin-right:0.5em; font-size:0.85em;}
+.slide h2{font-size:1.9rem; font-weight:800; line-height:1.15;}
+.sub{color:var(--muted); font-size:1.02rem; max-width:65ch; line-height:1.55;}
+.body{flex:1; display:flex; flex-direction:column; gap:16px; justify-content:center;}
+.row{display:flex; gap:16px; flex-wrap:wrap;}
+.col{flex:1; min-width:220px;}
+
+.panel{background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:16px 18px;}
+.panel-title{font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:8px; font-weight:600;}
+.term{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:10px;
+  padding:14px 16px; font-size:0.92rem; overflow-x:auto;
+}
+.term .line{white-space:pre; line-height:1.6;}
+.term .prompt{color:var(--accent-2);}
+.term .out{color:var(--ink);}
+.term .comment{color:var(--muted);}
+
+table.records{width:100%; border-collapse:collapse; font-size:0.92rem;}
+table.records th, table.records td{
+  text-align:left; padding:7px 10px; border-bottom:1px solid var(--line);
+  font-family:"IBM Plex Mono", ui-monospace, monospace;
+}
+table.records th{font-family:"IBM Plex Sans"; color:var(--muted); text-transform:uppercase; font-size:0.68rem; letter-spacing:0.06em; font-weight:600;}
+
+.path{display:flex; align-items:center; gap:0; flex-wrap:wrap; margin:6px 0;}
+.node{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+  padding:8px 12px; font-size:0.82rem; font-weight:600; white-space:nowrap;
+}
+.node.hot{border-color:var(--accent); color:var(--accent);}
+.node.warn{border-color:var(--danger); color:var(--danger);}
+.arrow{color:var(--muted); padding:0 8px; font-size:1rem;}
+
+.ask{
+  border:1.5px dashed var(--accent-2); border-radius:10px; padding:16px 18px;
+  background: color-mix(in srgb, var(--accent-2) 8%, transparent);
+}
+.ask .q-label{font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent-2); font-weight:700; margin-bottom:6px;}
+.ask .q-text{font-size:1.05rem; font-weight:600; margin-bottom:10px;}
+.reveal-btn{
+  background:var(--accent-2); color:var(--accent-2-ink); border:none; border-radius:7px;
+  padding:8px 14px; font-size:0.85rem; font-weight:700; cursor:pointer; font-family:inherit;
+}
+.reveal-btn:hover{filter:brightness(1.06);}
+.answer{
+  margin-top:12px; padding-top:12px; border-top:1px solid var(--line);
+  display:none; font-size:0.95rem; line-height:1.55; color:var(--ink);
+}
+.answer.shown{display:block;}
+.tag{
+  display:inline-block; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;
+  padding:2px 8px; border-radius:20px; font-weight:700; margin-right:6px;
+}
+.tag.beginner{background:var(--good-bg); color:var(--accent);}
+.tag.deep{background:var(--danger-bg); color:var(--danger);}
+.callout{
+  border-left:3px solid var(--accent); padding:10px 14px; background:var(--surface-2); border-radius:0 8px 8px 0;
+  font-size:0.9rem; color:var(--muted);
+}
+.callout.warn{border-left-color:var(--danger);}
+.callout b{color:var(--ink);}
+
+.egg{border:1px dotted var(--line); border-radius:10px; padding:12px 16px; font-size:0.88rem; color:var(--muted); background:transparent;}
+.egg-label{font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); font-weight:700; margin-bottom:6px;}
+.egg b{color:var(--ink);}
+
+.navbar{
+  position:fixed; bottom:0; left:0; right:0;
+  display:flex; justify-content:center; align-items:center; gap:14px;
+  padding:14px 0; background:linear-gradient(to top, var(--bg) 60%, transparent);
+}
+.navbtn{
+  background:var(--surface); border:1px solid var(--line); color:var(--ink);
+  border-radius:8px; padding:8px 16px; font-size:0.85rem; font-weight:600; cursor:pointer;
+  font-family:"IBM Plex Sans";
+}
+.navbtn:hover{border-color:var(--accent); color:var(--accent);}
+.navbtn:disabled{opacity:0.35; cursor:default;}
+.dots{display:flex; gap:6px;}
+.dot{width:7px; height:7px; border-radius:50%; background:var(--line); cursor:pointer;}
+.dot.active{background:var(--accent); width:20px; border-radius:4px;}
+.counter{font-family:"IBM Plex Mono"; font-size:0.8rem; color:var(--muted); min-width:52px; text-align:center;}
+
+.title-slide{align-items:flex-start; justify-content:center;}
+.title-slide h1{font-size:2.8rem; font-weight:800; line-height:1.05;}
+.title-slide .sub{font-size:1.15rem;}
+.title-list{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}
+.title-list button{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:20px;
+  padding:5px 12px; font-size:0.78rem; color:var(--muted); font-family:"IBM Plex Mono";
+  cursor:pointer; transition:border-color .15s, color .15s;
+}
+.title-list button:hover, .title-list button:focus-visible{border-color:var(--accent); color:var(--accent); outline:none;}
+
+
+kbd{background:var(--surface-2); border:1px solid var(--line); border-radius:5px; padding:1px 6px; font-size:0.78rem;}
+@media (prefers-reduced-motion: no-preference){ .slide.active{animation:rise .28s ease;} }
+@keyframes rise{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+.title-slide{
+  position:relative;
+  background-image:
+    linear-gradient(135deg, transparent 55%, color-mix(in srgb, var(--accent) 16%, transparent) 55%),
+    linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--accent) 10%, transparent) 75%);
+  background-repeat:no-repeat;
+  background-size:70% 100%, 45% 55%;
+  background-position:right top, left bottom;
+}
+.title-rule{border:none; border-top:1px solid var(--line); margin:2px 0 0; width:220px;}
+.navbar-logo{height:18px; width:auto; padding:5px 9px; background:var(--accent); border-radius:6px; display:block;}
+
+/* --- Connectivity Errors: case-file components --- */
+a.xref{color:var(--accent); font-weight:600;}
+.term.wrap{font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:0.82rem;}
+.term.wrap .line{white-space:pre-wrap; word-break:break-word;}
+.term .err{color:var(--danger);}
+.meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:-6px;}
+.chip{
+  font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:0.72rem;
+  background:var(--surface-2); border:1px solid var(--line); border-radius:20px;
+  padding:2px 10px; color:var(--muted);
+}
+.chip.rung{border-color:var(--accent); color:var(--accent); font-weight:600;}
+.steps{display:flex; flex-direction:column; gap:10px;}
+.step{
+  display:none; border-left:3px solid var(--accent-2); background:var(--surface-2);
+  border-radius:0 8px 8px 0; padding:10px 14px; font-size:0.92rem; line-height:1.5;
+}
+.step.shown{display:block;}
+@media (prefers-reduced-motion: no-preference){ .step.shown{animation:rise .22s ease;} }
+.step-label{font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent-2); font-weight:700; margin-bottom:4px;}
+.step.verdict{border-left-color:var(--accent); background:var(--good-bg);}
+.step.verdict .step-label{color:var(--accent);}
+.clue-btn{align-self:flex-start;}
+.clue-btn:disabled{opacity:0.45; cursor:default; filter:none;}
+.dd{
+  display:flex; gap:10px; align-items:baseline; flex-wrap:wrap;
+  font-size:0.8rem; color:var(--muted); border-top:1px solid var(--line); padding-top:10px;
+}
+.dd-label{font-size:0.66rem; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; white-space:nowrap;}
+.dd code{font-size:0.78rem; color:var(--ink); word-break:break-word;}
+table.records td.prose{font-family:"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;}
+table.records td code{font-size:0.86rem;}
+.story{display:flex; flex-direction:column; gap:8px;}
+.story .ask{padding:12px 16px;}
+.story .q-text{font-size:0.98rem; margin-bottom:8px;}
+@media (max-width:640px){
+  .slide{padding:28px 20px;}
+  .title-slide h1{font-size:2.1rem;}
+  table.records{font-size:0.8rem;}
+  .dots{display:none;}
+  .navbar{gap:8px;}
+}
+.table-scroll{overflow-x:auto;}
+.reveal-btn.ghost{background:transparent; color:var(--accent-2); border:1.5px solid var(--accent-2);}
+.reveal-btn.ghost:hover{background:color-mix(in srgb, var(--accent-2) 10%, transparent);}
+.cmds-body{display:none; margin-top:10px;}
+.cmds-body.shown{display:block;}
+@media (prefers-reduced-motion: no-preference){ .cmds-body.shown{animation:rise .22s ease;} }
+.cmds-note{font-size:0.66rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); font-weight:700; margin-bottom:6px;}
+.blackterm{
+  background:#000; color:#fff; border-radius:10px; padding:14px 16px;
+  font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:0.8rem; line-height:1.55; overflow-x:auto;
+}
+.blackterm .line{white-space:pre-wrap; word-break:break-word;}
+.blackterm .p{font-weight:600;}
+.blackterm .c{color:#c4c4c4;}
+
+</style>
+
+<div class="deck">
+  <div class="chrome"><span class="brand">Connectivity Errors: Reading the Tea Leaves</span><span id="slideLabel"></span></div>
+
+  <!-- 0: TITLE -->
+  <section class="slide active title-slide">
+    <div class="eyebrow">Don Eisele, Platform Engineering</div>
+    <h1>Connectivity Errors<br>Reading the Tea Leaves</h1>
+    <p class="sub">The applied finale to the series. No new theory: DNS, TLS, and connectivity together, worked as real cases. Every error in this deck came out of our own Datadog during one week in October 2026.</p>
+    <hr class="title-rule">
+    <div class="title-list">
+      <button type="button" onclick="goTo(1)">how to work a case</button>
+      <button type="button" onclick="goTo(2)">error decoder</button>
+      <button type="button" onclick="goTo(3)">database issue</button>
+      <button type="button" onclick="goTo(4)">not a hostname</button>
+      <button type="button" onclick="goTo(5)">eight services, one problem</button>
+      <button type="button" onclick="goTo(6)">refused vs. timed out</button>
+      <button type="button" onclick="goTo(7)">a whole morning</button>
+      <button type="button" onclick="goTo(8)">idle connections</button>
+      <button type="button" onclick="goTo(9)">two nginx timeouts</button>
+      <button type="button" onclick="goTo(10)">the 502 that was a deploy</button>
+      <button type="button" onclick="goTo(11)">IPv6</button>
+      <button type="button" onclick="goTo(12)">TLS errors that aren't</button>
+      <button type="button" onclick="goTo(13)">Cloudflare codes</button>
+      <button type="button" onclick="goTo(14)">war stories</button>
+      <button type="button" onclick="goTo(15)">field guide</button>
+    </div>
+    <div class="callout" style="margin-top:auto;">
+      <b>Don Eisele</b> — Platform Engineering, Operations Team, since January 2026. Previously
+      Lead for Systems, Infrastructure, Platform, and Cloud Architecture for 30 years at K-State.
+      <p style="margin:10px 0 0;">This is meant to be an applied look at applying fundamental foundations to looking at connection errors in real life to better understand how to quickly get to the problem.</p>
+      <p style="margin:10px 0 0;">Don also teaches Aikido and Iaido — in the martial arts world, basics are the fundamental key to understanding everything else. Technology is no different.</p>
+    </div>
+  </section>
+
+  <!-- 1: method -->
+  <section class="slide">
+    <div class="eyebrow">01 · Method</div>
+    <h2>How to work a case</h2>
+    <p class="sub">Four questions, asked in order, before touching anything. Every case after this slide runs through the same four.</p>
+    <div class="body">
+      <div class="row">
+        <div class="col panel"><div class="panel-title">1. What are the exact words?</div>Copy the whole error, errno and all. <code>ENOTFOUND</code> and <code>EAI_AGAIN</code> both say "DNS," but they mean different things.</div>
+        <div class="col panel"><div class="panel-title">2. Who said it?</div>The client library, a proxy (nginx, APISIX, Cloudflare), a load balancer, or the app itself? A 502 is a proxy talking <i>about</i> something behind it.</div>
+      </div>
+      <div class="row">
+        <div class="col panel"><div class="panel-title">3. Which rung of the ladder?</div>Name, port, handshake, or app. The wording almost always tells you, once you know the decoder (next slide).</div>
+        <div class="col panel"><div class="panel-title">4. When, and how wide?</div>One service or thirty? One pod or every node? Starting at a deploy, or at a steady rate for weeks? Blast radius points at the shared dependency.</div>
+      </div>
+      <div class="path">
+        <div class="node">1 · name resolves?</div><span class="arrow">→</span>
+        <div class="node">2 · port accepts a connection (or gets packets at all)?</div><span class="arrow">→</span>
+        <div class="node">3 · TLS handshakes?</div><span class="arrow">→</span>
+        <div class="node hot">4 · app answers?</div>
+      </div>
+      <div class="callout">That's the debugging ladder from <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tcp-deck.html" target="_blank" rel="noopener">Connectivity in Depth</a>. Once you've placed the error on a rung, test <b>that rung</b>, from <b>the same place</b> the error came from: the same pod, the same box, the same network path.</div>
+      <div class="egg"><div class="egg-label">🥚 Easter egg</div>Datadog keeps about <b>7 days</b> of logs searchable, so every case here is from the week of October 5–12, 2026. Nothing was cherry-picked from years of history. This is what a normal week looks like.</div>
+    </div>
+  </section>
+
+  <!-- 2: decoder -->
+  <section class="slide">
+    <div class="eyebrow">02 · Reference</div>
+    <h2>The decoder: same failure, three dialects</h2>
+    <p class="sub">Node, Go, and nginx describe identical failures in different words. Learn to see the failure through the dialect.</p>
+    <div class="body">
+      <div class="table-scroll">
+      <table class="records">
+        <tr><th>Rung · what happened</th><th>Node</th><th>Go</th><th>nginx (errno)</th></tr>
+        <tr><td class="prose"><b>Name</b> · authoritative "no such name"</td><td>ENOTFOUND</td><td>no such host</td><td>could not be resolved</td></tr>
+        <tr><td class="prose"><b>Name</b> · resolver didn't answer</td><td>EAI_AGAIN</td><td>lookup … :53: i/o timeout</td><td>… timed out</td></tr>
+        <tr><td class="prose"><b>Port</b> · RST back, nothing listening</td><td>ECONNREFUSED</td><td>connect: connection refused</td><td>(111: Connection refused)</td></tr>
+        <tr><td class="prose"><b>Port</b> · silence, packets dropped</td><td>ETIMEDOUT</td><td>dial tcp …: i/o timeout</td><td>(110) while connecting</td></tr>
+        <tr><td class="prose"><b>Port</b> · no route at all</td><td>ENETUNREACH</td><td>network is unreachable</td><td>(101: Network unreachable)</td></tr>
+        <tr><td class="prose"><b>Port</b> · connected, then torn down</td><td>ECONNRESET / EPIPE</td><td>connection reset by peer / broken pipe</td><td>(104) / (32: Broken pipe)</td></tr>
+        <tr><td class="prose"><b>TLS</b> · handshake didn't finish</td><td>ERR_TLS_… / UNABLE_TO_…</td><td>x509: … / tls: …</td><td>SSL_do_handshake() failed</td></tr>
+        <tr><td class="prose"><b>App</b> · connected, answer too slow</td><td>(your timeout)</td><td>context deadline exceeded</td><td>(110) while reading response header</td></tr>
+      </table>
+      </div>
+      <div class="callout warn">Watch out for <code>i/o timeout</code> in Go. It shows up on two different rungs. <code>lookup X on 172.20.0.10:53: i/o timeout</code> is a <b>DNS</b> query over UDP that got no answer. <code>dial tcp 10.0.0.5:4222: i/o timeout</code> is a <b>TCP</b> connect that got no answer. Read what comes before it.</div>
+    </div>
+  </section>
+
+  <!-- 3: Case 1 — deleted RDS -->
+  <section class="slide">
+    <div class="eyebrow">03 · Case 1 · DNS</div>
+    <h2>Database issue</h2>
+    <div class="meta"><span class="chip">service: checkdatabase-east</span><span class="chip">AWS Lambda</span><span class="chip">~8,640 / day, every day</span><span class="chip rung">rung 1 · name</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line out">ERROR Invoke Error {"errorType":"Error","errorMessage":"<span class="err">getaddrinfo ENOTFOUND pw-production-us-east-1d.xxxxxxxxxxxx.us-east-1.rds.amazonaws.com</span>","code":"ENOTFOUND","syscall":"getaddrinfo" …}</div>
+<div class="line comment">    at Connection.connect (mysql/lib/Connection.js) → testConnection</div>
+      </div>
+      <div class="steps">
+        <button class="reveal-btn clue-btn" onclick="nextClue(this)">Next clue →</button>
+        <div class="step"><div class="step-label">Clue 1 · exact words</div><code>ENOTFOUND</code>, not <code>EAI_AGAIN</code>. The resolver answered, and the answer was "that name doesn't exist." This isn't a flaky resolver. It's a firm no.</div>
+        <div class="step"><div class="step-label">Clue 2 · when and how wide</div>One error roughly every 10 seconds, at a perfectly flat rate, all week. No spike at a deploy, no other services affected. Something scheduled is asking for the same missing name over and over.</div>
+        <div class="step"><div class="step-label">Clue 3 · test the rung</div><code>dig pw-production-us-east-1d.….rds.amazonaws.com</code> → <code>status: NXDOMAIN</code>. RDS publishes an instance's DNS name while the instance exists and removes it when the instance is deleted.</div>
+        <div class="step verdict"><div class="step-label">Verdict</div><b>The database isn't there.</b> A health-check Lambda is still testing a database that was deleted or renamed. A sibling Lambda does the same against a <code>-1b</code> instance. Together they make about 121k errors a week, all noise. <b>ENOTFOUND on a cloud-generated hostname usually means "that resource is gone,"</b> not "DNS is broken." The fix is to delete the check, not to touch DNS.</div>
+      </div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># from a box in the same VPC as the Lambda</div>
+<div class="line c"># rung 1 · name</div>
+<div class="line"><span class="p">$</span> dig pw-production-us-east-1d.xxxxxxxxxxxx.us-east-1.rds.amazonaws.com</div>
+<div class="line">;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NXDOMAIN, id: 41823</div>
+<div class="line">;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1</div>
+<div class="line">;; AUTHORITY SECTION:</div>
+<div class="line">rds.amazonaws.com.  60  IN  SOA  ns-1031.awsdns-00.org. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400</div>
+<div class="line c"># ✗ rung 1 fails with NXDOMAIN. No address, so rungs 2–4 have nothing to test.</div>
+<div class="line"> </div>
+<div class="line c"># confirm the resource itself is gone:</div>
+<div class="line"><span class="p">$</span> aws rds describe-db-instances --db-instance-identifier pw-production-us-east-1d</div>
+<div class="line">An error occurred (DBInstanceNotFound) when calling the DescribeDBInstances operation: DBInstance pw-production-us-east-1d not found.</div>
+          </div>
+        </div>
+      </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>service:checkdatabase-east* ENOTFOUND</code></div>
+    </div>
+  </section>
+
+  <!-- 4: Case 2 — not a hostname -->
+  <section class="slide">
+    <div class="eyebrow">04 · Case 2 · DNS?</div>
+    <h2>"ENOTFOUND" for a name that was never a host</h2>
+    <div class="meta"><span class="chip">geo-worker · prod EC2</span><span class="chip">rabbit consumer · prod</span><span class="chip">intermittent, ~110 hits</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line out">Database connection failed: <span class="err">getaddrinfo ENOTFOUND app_srv_worker</span></div>
+<div class="line out">[getRabbitConnection] GetConnectionWithEnv Failed: Error: <span class="err">getaddrinfo ENOTFOUND amqp</span></div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">Look closely at the two names DNS was asked to resolve. What's wrong with them, and should anyone be looking at DNS?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">Neither one is a hostname. <code>app_srv_worker</code> is a <b>database username</b>, and <code>amqp</code> is a <b>URL scheme</b>. The code built a connection string, a URL parser split it in the wrong place, and the wrong piece got handed to DNS. Common causes:
+          <ul style="margin:8px 0 0; padding-left:20px;">
+            <li>an unencoded <code>@</code>, <code>#</code>, or <code>/</code> in the password (<code>#</code> starts a URL fragment, so everything after it disappears)</li>
+            <li>an env var that's empty or unset, so <code>amqp://${HOST}</code> collapses</li>
+            <li>a full URL passed into a field that expects a bare host</li>
+          </ul>
+          DNS did its job correctly. <b>The name in the error is the name the code actually used.</b> Read it before you blame the resolver.</div>
+      </div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># rung 1 · the name from the error</div>
+<div class="line"><span class="p">$</span> dig +noall +comments app_srv_worker | grep status</div>
+<div class="line">;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NXDOMAIN, id: 5120</div>
+<div class="line"> </div>
+<div class="line c"># rung 1 · the name that should have been used</div>
+<div class="line"><span class="p">$</span> dig +short mysql.prod.internal</div>
+<div class="line">10.0.5.86</div>
+<div class="line"> </div>
+<div class="line c"># rung 2 · port</div>
+<div class="line"><span class="p">$</span> nc -zv 10.0.5.86 3306</div>
+<div class="line">Connection to 10.0.5.86 3306 port [tcp/mysql] succeeded!</div>
+<div class="line c"># ✓ the real host resolves and connects. The network is fine, so look at the config:</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> printenv DATABASE_URL</div>
+<div class="line">mysql://app_srv_worker:****#****@mysql.prod.internal:3306/geo</div>
+<div class="line c"># an unencoded '#' in the password: everything after it parses as a URL fragment</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> printenv RABBIT_HOST</div>
+<div class="line">amqp://rabbit.prod.internal:5672</div>
+<div class="line c"># a full URL in a field that expects a bare host, so the library looks up "amqp"</div>
+          </div>
+        </div>
+      </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>"ENOTFOUND amqp" OR "ENOTFOUND app_srv_"</code></div>
+    </div>
+  </section>
+
+  <!-- 5: Case 3 — kube-dns blip -->
+  <section class="slide">
+    <div class="eyebrow">05 · Case 3 · DNS</div>
+    <h2>Eight services, 36 minutes, one problem</h2>
+    <div class="meta"><span class="chip">cluster: qa-green</span><span class="chip">2026-10-09 22:14–22:50 UTC</span><span class="chip">argocd, backstage, settlement, shipping, terms, cloudflared, …</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line out">dial tcp: lookup github.com on 172.20.0.10:53: read udp 10.101.x.x:…-&gt;172.20.0.10:53: <span class="err">i/o timeout</span></div>
+<div class="line out">dial tcp: lookup argo-cd-argocd-repo-server on 172.20.0.10:53: <span class="err">no such host</span></div>
+<div class="line out">getaddrinfo <span class="err">EAI_AGAIN</span> qa-elastic.cliquidator.info</div>
+<div class="line out">getaddrinfo <span class="err">EAI_AGAIN</span> item-service</div>
+<div class="line out">getaddrinfo <span class="err">EAI_AGAIN</span> qa-db.cliquidator.info</div>
+<div class="line out">lookup region1.v2.argotunnel.com: <span class="err">i/o timeout</span></div>
+<div class="line out"><span class="err">No Living connections</span>     <span class="comment"># the Elasticsearch client's way of saying the same thing</span></div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">Seven different-looking errors from eight teams' services, all in the same half hour. How many problems are there, and where would you look first?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer"><b>One.</b> Every line is a name lookup, and the Go lines name the server: <code>172.20.0.10:53</code>, the cluster's kube-dns ClusterIP. External names (<code>github.com</code>), internal zones (<code>cliquidator.info</code>), and bare in-cluster Service names (<code>item-service</code>) all failed together. That means the problem is the resolver they share, not any one of the names. <code>EAI_AGAIN</code> means "temporary failure, try again," which is a very different message from Case 1's firm <code>ENOTFOUND</code>.
+          <p style="margin:8px 0 0;">First moves: <code>kubectl -n kube-system get pods -l k8s-app=kube-dns</code>, then a lookup from a throwaway pod on the same node. A node-memory-pressure alert fired in the same window, so a starved CoreDNS pod is the leading theory. It's a theory, though, not a confirmed cause.</p></div>
+      </div>
+      <div class="egg"><div class="egg-label">🥚 Easter egg</div>Why only a theory? <b>CoreDNS's own logs aren't shipped to Datadog</b>, so this case can't be closed from the dashboard. Sometimes a case's real finding is the gap in your observability.</div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># from a throwaway pod on qa-green, during the window</div>
+<div class="line"><span class="p">$</span> kubectl run -it --rm dnstest --image=nicolaka/netshoot --restart=Never -- bash</div>
+<div class="line"> </div>
+<div class="line c"># rung 1 · name, through cluster DNS</div>
+<div class="line"><span class="p">$</span> dig item-service.qa.svc.cluster.local</div>
+<div class="line">;; communications error to 172.20.0.10#53: timed out</div>
+<div class="line">;; communications error to 172.20.0.10#53: timed out</div>
+<div class="line">;; communications error to 172.20.0.10#53: timed out</div>
+<div class="line">;; no servers could be reached</div>
+<div class="line c"># ✗ not NXDOMAIN. No answer at all, so the resolver is the problem, not the name.</div>
+<div class="line"> </div>
+<div class="line c"># rung 1 · same question, bypassing cluster DNS</div>
+<div class="line"><span class="p">$</span> dig +short @8.8.8.8 github.com</div>
+<div class="line">140.82.112.4</div>
+<div class="line c"># ✓ the network path to the outside is fine. Only kube-dns is failing.</div>
+<div class="line"> </div>
+<div class="line c"># rung 2 · port, by IP (skips DNS entirely)</div>
+<div class="line"><span class="p">$</span> nc -zv 192.168.20.191 3306</div>
+<div class="line">Connection to 192.168.20.191 3306 port [tcp/mysql] succeeded!</div>
+<div class="line"> </div>
+<div class="line c"># so the next stop is the resolver itself:</div>
+<div class="line"><span class="p">$</span> kubectl -n kube-system get pods -l k8s-app=kube-dns -o wide</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6: Case 4 — refused vs timeout -->
+  <section class="slide">
+    <div class="eyebrow">06 · Case 4 · TCP</div>
+    <h2>Refused and timed out, same box, same morning</h2>
+    <div class="meta"><span class="chip">target: qa-db.cliquidator.info → 192.168.20.191</span><span class="chip">MySQL · Redis · RabbitMQ · NATS</span><span class="chip">~33 services in qa</span><span class="chip">2026-10-10</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line out">SequelizeConnectionRefusedError: connect <span class="err">ECONNREFUSED</span> 192.168.20.191:3306</div>
+<div class="line out">Error connecting to RabbitMQ: dial tcp 192.168.20.191:5672: connect: <span class="err">connection refused</span></div>
+<div class="line out">[ioredis] Unhandled error event: Error: connect <span class="err">ETIMEDOUT</span>     <span class="comment"># … at Socket._onTimeout</span></div>
+<div class="line out">RabbitMQ reconnect failed: connect <span class="err">ETIMEDOUT</span> 192.168.20.191:5672</div>
+<div class="line out">level=panic msg="Failed to connect to NATS server: dial tcp 192.168.20.191:4222: <span class="err">i/o timeout</span>"</div>
+<div class="line out">(conn:-1, no: 45012, SQLState: 08S01) <span class="err">Connection timeout: failed to create socket after 1000ms</span></div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">"Refused" errors ran from 05:00 to 08:13 UTC. "Timed out" errors ran from 05:00 all the way to noon. What was the box doing in each of those windows?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer"><b>Refused</b> means a packet reached a running host and its kernel answered with a RST: "I'm here, but nothing is listening on that port." The machine was up and the database, queue, and cache daemons were down. <b>Timed out</b> means nothing answered at all. The host was down, rebooting, or unreachable, so SYNs went into the void. Refused errors stopping at 08:13 while timeouts kept going suggests the host itself stopped answering after that point. Notice that DNS was fine the whole time: every line has the IP in it. The failure is a rung below that.</div>
+      </div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># rung 1 · name: fine the whole time</div>
+<div class="line"><span class="p">$</span> dig +short qa-db.cliquidator.info</div>
+<div class="line">192.168.20.191</div>
+<div class="line"> </div>
+<div class="line c"># 06:00 UTC · rung 2 · port</div>
+<div class="line"><span class="p">$</span> nc -zv 192.168.20.191 3306</div>
+<div class="line">nc: connect to 192.168.20.191 port 3306 (tcp) failed: Connection refused</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> nc -zv 192.168.20.191 22</div>
+<div class="line">Connection to 192.168.20.191 22 port [tcp/ssh] succeeded!</div>
+<div class="line c"># ✗ instant refusal on 3306 while 22 answers: the box is up, and the services are down</div>
+<div class="line"> </div>
+<div class="line c"># 09:00 UTC · rung 2 · port</div>
+<div class="line"><span class="p">$</span> nc -zv -w 5 192.168.20.191 3306</div>
+<div class="line">nc: connect to 192.168.20.191 port 3306 (tcp) timed out: Operation now in progress</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> nc -zv -w 5 192.168.20.191 22</div>
+<div class="line">nc: connect to 192.168.20.191 port 22 (tcp) timed out: Operation now in progress</div>
+<div class="line c"># ✗ every port hangs for the full 5 seconds: the host itself, or its path, is gone</div>
+          </div>
+        </div>
+      </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>env:qa ("ECONNREFUSED" OR "ETIMEDOUT" OR "i/o timeout") 192.168.20.191</code> → Patterns view</div>
+    </div>
+  </section>
+
+  <!-- 7: Case 5 — the whole morning on the ladder -->
+  <section class="slide">
+    <div class="eyebrow">07 · Case 5 · Every rung</div>
+    <h2>One morning, read top to bottom</h2>
+    <p class="sub">The same QA box from Case 4, before and after. The errors change rung as the situation changes, so the error wording works as a timeline.</p>
+    <div class="body">
+      <div class="steps">
+        <button class="reveal-btn clue-btn" onclick="nextClue(this)">Next clue →</button>
+        <div class="step"><div class="step-label">03:06 UTC · rung 4, app</div><code>SqlError: (conn:-1, no: 1040, SQLState: HY000) Too many connections</code>, from account, terms, person-service, deal-service, and nvm-exec. TCP connected fine. MySQL accepted the socket and then refused the <i>login</i>, because its connection limit was full. Network tools would all say "healthy" here.</div>
+        <div class="step"><div class="step-label">05:00 UTC · rung 2, port</div>Refused, then timed out: Case 4. The services are gone, then the host is gone.</div>
+        <div class="step"><div class="step-label">12:00 UTC · recovery</div>Timeouts stop. The host is back, and TCP connects again.</div>
+        <div class="step"><div class="step-label">12:40 UTC · rung 4, app (again)</div><code>Access denied for user 'app_srv_…'@'10.101.%.%' to database 'cliquidator'</code> (MySQL 1044). The network and TLS are both fine, and the <b>grants</b> are wrong. That points to a restore or rebuild that didn't bring the user permissions back.</div>
+        <div class="step verdict"><div class="step-label">Verdict</div>One incident, three different rungs over nine hours. If you only read the newest error, you'd chase a permissions bug and miss that the box went down. <b>Scroll back to the first error in the window, not the loudest one.</b></div>
+      </div>
+      <div class="egg"><div class="egg-label">🥚 Easter egg</div>One worker retried with no backoff and logged about <b>645,000 ECONNREFUSED in a single hour</b>. That made October 10 a 14-million-error-log day. Exponential backoff with jitter isn't optional politeness: without it, your retries become the next incident.</div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># 03:10 UTC · rung 2 · port</div>
+<div class="line"><span class="p">$</span> nc -zv 192.168.20.191 3306</div>
+<div class="line">Connection to 192.168.20.191 3306 port [tcp/mysql] succeeded!</div>
+<div class="line"> </div>
+<div class="line c"># rung 4 · for a database, use its own client in place of curl</div>
+<div class="line"><span class="p">$</span> mysql -h 192.168.20.191 -u app_srv_… -p -e 'SELECT 1'</div>
+<div class="line">ERROR 1040 (HY000): Too many connections</div>
+<div class="line c"># ✓ rung 2 is fine. ✗ rung 4: MySQL accepted the socket and refused the login.</div>
+<div class="line"> </div>
+<div class="line c"># 12:40 UTC, after recovery · rung 2 · port</div>
+<div class="line"><span class="p">$</span> nc -zv 192.168.20.191 3306</div>
+<div class="line">Connection to 192.168.20.191 3306 port [tcp/mysql] succeeded!</div>
+<div class="line"> </div>
+<div class="line c"># rung 4 · app</div>
+<div class="line"><span class="p">$</span> mysql -h 192.168.20.191 -u app_srv_… -p -e 'SELECT 1' cliquidator</div>
+<div class="line">ERROR 1044 (42000): Access denied for user 'app_srv_…'@'10.101.%.%' to database 'cliquidator'</div>
+<div class="line c"># ✗ rung 4 again, for a new reason: the network is healthy and the grants are missing</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8: Case 6 — idle connection resets -->
+  <section class="slide">
+    <div class="eyebrow">08 · Case 6 · TCP</div>
+    <h2>Broken pipe on the first query after a quiet spell</h2>
+    <div class="meta"><span class="chip">service: authentication (Go)</span><span class="chip">pods 10.102.x → DB in legacy VPC 10.0.x</span><span class="chip">~2k pairs in production</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line out">[mysql] packets.go:155 write tcp 10.102.21.38:58948-&gt;10.0.5.86:3306: <span class="err">write: broken pipe</span></div>
+<div class="line out">connection.go:801 closing bad idle connection: <span class="err">connection reset by peer</span></div>
+<div class="line comment"># Node's version of the same thing, seen in qa this week:</div>
+<div class="line out">SequelizeDatabaseError: read <span class="err">ECONNRESET</span></div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">DNS resolves, the port is open, and most queries work. The errors cluster on the first query after the pool has been idle a while. What's going on?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">An <b>idle-timeout mismatch</b>. The pool keeps connections open longer than the database, or something in the cross-VPC path, is willing to. The far side quietly drops the idle connection. The client doesn't find out until its next write hits a dead socket: broken pipe, then reset. The Go driver retries on a fresh connection, so users mostly never notice, but the logs do. Fix it at the client by setting <code>db.SetConnMaxIdleTime()</code> and <code>SetConnMaxLifetime()</code> <b>shorter</b> than the server's <code>wait_timeout</code> and any LB or NAT idle timeout in the path.</div>
+      </div>
+      <div class="callout"><b>A case from this same week:</b> after a gateway migration, Tableau refreshes against a marketing DB failed with two look-alike errors that had two separate causes. MariaDB's <code>wait_timeout</code> was 300s, while Tableau reuses connections for 30–120 minutes. An ALB idle timeout of 60s was cutting off a 177-second refresh. The rule that fixed both: <b>every hop's idle timeout has to outlast the hop in front of it.</b> Backend keepalive should be longer than the LB idle timeout, and the LB idle timeout should be longer than the longest request.</div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># from an authentication pod</div>
+<div class="line c"># rung 2 · port</div>
+<div class="line"><span class="p">$</span> nc -zv 10.0.5.86 3306</div>
+<div class="line">Connection to 10.0.5.86 3306 port [tcp/mysql] succeeded!</div>
+<div class="line"> </div>
+<div class="line c"># rung 4 · app: a fresh connection works...</div>
+<div class="line"><span class="p">$</span> mysql -h 10.0.5.86 -u app_srv_… -p auth</div>
+<div class="line"><span class="p">mysql&gt;</span> SELECT 1;</div>
+<div class="line">1 row in set (0.00 sec)</div>
+<div class="line"> </div>
+<div class="line c"># ...leave it idle for 15 minutes, then try again:</div>
+<div class="line"><span class="p">mysql&gt;</span> SELECT 1;</div>
+<div class="line">ERROR 2006 (HY000): MySQL server has gone away</div>
+<div class="line">No connection. Trying to reconnect...</div>
+<div class="line">Connection id:    48213</div>
+<div class="line">1 row in set (0.02 sec)</div>
+<div class="line c"># ✗ the same failure the Go driver logs, then the same silent retry</div>
+<div class="line"> </div>
+<div class="line"><span class="p">mysql&gt;</span> SHOW VARIABLES LIKE 'wait_timeout';</div>
+<div class="line">| wait_timeout  | 600   |</div>
+<div class="line c"># compare with the pool's max idle time, and with any NAT or LB idle timeout in the path</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9: Case 7 — two nginx timeouts -->
+  <section class="slide">
+    <div class="eyebrow">09 · Case 7 · TCP vs. App</div>
+    <h2>Two "upstream timed out" errors, two different rungs</h2>
+    <div class="meta"><span class="chip">apisix-internal · qa</span><span class="chip">www / apisix-public · prod</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line comment"># A: apisix-internal in qa, ~42 this week</div>
+<div class="line out">upstream timed out (110: Connection timed out) <span class="err">while connecting to upstream</span>, client: 10.101.22.x, request: "GET /purplewave-public/v1/excom/config", upstream: "https://10.0.0.88:443/v1/excom/config"</div>
+<div class="line comment"># B: www in prod, ~1.7k this week</div>
+<div class="line out">upstream timed out (110: Connection timed out) <span class="err">while reading response header from upstream</span>, server: www.purplewave.com</div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">Same errno (110), same opening words. Which rung is each one on, and what's suspicious about the addresses in A?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer"><b>The phrase after the comma is the whole diagnosis.</b> "While <b>connecting</b>": the SYN was never answered. That's rung 2, a security group, NACL, or route. "While <b>reading response header</b>": TCP and TLS both succeeded and the app was slow to answer. That's rung 4, so look at the app and its dependencies, not the network.
+          <p style="margin:8px 0 0;">The addresses in A: the client is <code>10.101.x</code>, the <b>QA</b> cluster, and the upstream is <code>10.0.0.88</code>, a <b>production</b> EC2 range. The security group blocking that path is doing its job. The real bug is a QA route config pointing at a prod host. It looks like a network block, but it's a config bug.</p></div>
+      </div>
+      <div class="egg"><div class="egg-label">🥚 Easter egg</div>nginx has two more upstream phrasings worth memorizing. <code>upstream prematurely closed connection while reading upstream</code> means the backend hung up mid-response, usually because it crashed or hit its own timeout. <code>no live upstreams while connecting to upstream</code> means nginx had already marked every backend as failed, so it didn't even try. That error is a downstream effect of something earlier, so look further back in the log.</div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># A · from an apisix-internal pod in qa</div>
+<div class="line c"># rung 1 · name: nothing to resolve, because the upstream is a bare IP</div>
+<div class="line c"># rung 2 · port</div>
+<div class="line"><span class="p">$</span> nc -zv -w 5 10.0.0.88 443</div>
+<div class="line">nc: connect to 10.0.0.88 port 443 (tcp) timed out: Operation now in progress</div>
+<div class="line c"># ✗ rung 2 fails with silence: a security group, NACL, or route between QA and prod</div>
+<div class="line"> </div>
+<div class="line c"># B · www in prod</div>
+<div class="line c"># rung 3 · TLS</div>
+<div class="line"><span class="p">$</span> openssl s_client -connect www.purplewave.com:443 -servername www.purplewave.com -brief &lt;/dev/null</div>
+<div class="line">CONNECTION ESTABLISHED</div>
+<div class="line">Protocol version: TLSv1.3</div>
+<div class="line">Ciphersuite: TLS_AES_128_GCM_SHA256</div>
+<div class="line">Verification: OK</div>
+<div class="line"> </div>
+<div class="line c"># rung 4 · app, with timing for each phase</div>
+<div class="line"><span class="p">$</span> curl -s -o /dev/null -w 'connect=%{time_connect}s tls=%{time_appconnect}s first-byte=%{time_starttransfer}s code=%{http_code}\n' https://www.purplewave.com/&lt;slow-page&gt;</div>
+<div class="line">connect=0.012s tls=0.041s first-byte=60.004s code=504</div>
+<div class="line c"># ✓ rungs 1–3 finish in milliseconds. ✗ rung 4: 60 seconds waiting for the first byte.</div>
+          </div>
+        </div>
+      </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>"upstream timed out" "while connecting"</code> vs. <code>"upstream timed out" "reading response header"</code></div>
+    </div>
+  </section>
+
+  <!-- 10: Case 8 — 502 was a deploy -->
+  <section class="slide">
+    <div class="eyebrow">10 · Case 8 · App behind a proxy</div>
+    <h2>The 502 spike that was a deploy</h2>
+    <div class="meta"><span class="chip">prod EC2 · release automation</span><span class="chip">2026-10-09 15:13–15:24 UTC</span><span class="chip">502s: ~1k/day → ~61k that day</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line comment"># socket-proxy access log: the symptom</div>
+<div class="line out">"GET /v2/invoices/…" <span class="err">502</span></div>
+<div class="line comment"># nginx error log, same minute: the cause</div>
+<div class="line out">[crit] connect() to unix:/var/run/workflow-service/workflow-service.sock failed (<span class="err">2: No such file or directory</span>) while connecting to upstream, server: dashboard.purplewave.com</div>
+      </div>
+      <div class="steps">
+        <button class="reveal-btn clue-btn" onclick="nextClue(this)">Next clue →</button>
+        <div class="step"><div class="step-label">Clue 1 · who said it</div>The 502 came from the <b>proxy</b>, and a 502 is the proxy reporting that the thing behind it failed. The access log only shows the symptom, so go to the proxy's <b>error</b> log for the same minute.</div>
+        <div class="step"><div class="step-label">Clue 2 · the errno sequence</div>Over the 11 minutes, the same sockets (invoice, lead, contract, commission, apf, saved-search, note) cycle through three errnos. <code>(2: No such file or directory)</code>: the socket file is gone because the process is stopped. <code>(111: Connection refused)</code>: the file is back but nothing is accepting yet. <code>(13: Permission denied)</code>: briefly recreated with the wrong owner (43 hits).</div>
+        <div class="step"><div class="step-label">Clue 3 · when</div>The window lines up exactly with a release-automation run on those hosts.</div>
+        <div class="step verdict"><div class="step-label">Verdict</div>Services were restarted in place with no draining, so nginx kept sending traffic to sockets that didn't exist yet. It's the same refused-vs-missing logic as Case 4, on a Unix socket instead of a TCP port. <b>The access log tells you that it broke. The error log tells you why.</b></div>
+      </div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># on the EC2 host, mid-deploy</div>
+<div class="line c"># rung 4 · app, through the proxy</div>
+<div class="line"><span class="p">$</span> curl -s -o /dev/null -w '%{http_code}\n' https://dashboard.purplewave.com/v2/invoices/health</div>
+<div class="line">502</div>
+<div class="line"> </div>
+<div class="line c"># rung 2 · port: for a unix socket, nc -U replaces host:port</div>
+<div class="line"><span class="p">$</span> nc -zU /var/run/invoice-service/invoice-service.sock</div>
+<div class="line">nc: unix connect failed: No such file or directory</div>
+<div class="line c"># ✗ errno 2: the socket file doesn't exist, because the service is stopped</div>
+<div class="line"> </div>
+<div class="line c"># a few seconds later:</div>
+<div class="line"><span class="p">$</span> nc -zU /var/run/invoice-service/invoice-service.sock</div>
+<div class="line">nc: unix connect failed: Connection refused</div>
+<div class="line c"># ✗ errno 111: the file is back, and nothing is accepting yet</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> sudo -u nginx nc -zU /var/run/invoice-service/invoice-service.sock</div>
+<div class="line">nc: unix connect failed: Permission denied</div>
+<div class="line c"># ✗ errno 13: it works as root and fails as the nginx user, so the socket's owner is wrong</div>
+<div class="line"> </div>
+<div class="line c"># after the deploy settles:</div>
+<div class="line"><span class="p">$</span> curl -s -o /dev/null -w '%{http_code}\n' https://dashboard.purplewave.com/v2/invoices/health</div>
+<div class="line">200</div>
+          </div>
+        </div>
+      </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>"connect() to unix" "while connecting to upstream"</code>, then <code>service:socket-proxy @http.status_code:502</code></div>
+    </div>
+  </section>
+
+  <!-- 11: Case 9 — IPv6 -->
+  <section class="slide">
+    <div class="eyebrow">11 · Case 9 · DNS meets routing</div>
+    <h2>"Network unreachable" to a site that's up</h2>
+    <div class="meta"><span class="chip">purplewave-public-proxy · staging</span><span class="chip">kargo · qa-green</span><span class="chip">steady, all week</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line out">connect() to [2606:4700::6812:xxxx]:443 failed (<span class="err">101: Network unreachable</span>) while connecting to upstream</div>
+<div class="line out">upstream server temporarily disabled while connecting to upstream</div>
+<div class="line out">dial tcp [2606:50c0:8000::154]:443: connect: <span class="err">network is unreachable</span>     <span class="comment"># pkg-containers.githubusercontent.com</span></div>
+      </div>
+      <div class="steps">
+        <button class="reveal-btn clue-btn" onclick="nextClue(this)">Next clue →</button>
+        <div class="step"><div class="step-label">Clue 1 · exact words</div>Errno 101 isn't refused (111) and it isn't timed out (110). The packet <b>never left the machine</b>, because the local routing table has no route to that destination at all.</div>
+        <div class="step"><div class="step-label">Clue 2 · look at the address</div>Those are IPv6 addresses (Cloudflare and GitHub). DNS returned an <code>AAAA</code> record alongside the <code>A</code> record, and the client tried IPv6 first. <code>dig AAAA host</code> and <code>ip -6 route</code> on the pod or node confirm it: there's an address, but no route to it.</div>
+        <div class="step verdict"><div class="step-label">Verdict</div>Nothing upstream is down. nginx marks the IPv6 peer as failed and falls back to IPv4, which works, so all you see is steady low-level noise. Fix it by resolving IPv4 only (nginx <code>resolver … ipv6=off;</code>), or by giving the network real IPv6. Either way, <b>the error is a rung-1 answer meeting a rung-2 limitation.</b></div>
+      </div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># from a kargo pod</div>
+<div class="line c"># rung 1 · name: both record types come back</div>
+<div class="line"><span class="p">$</span> dig +short A pkg-containers.githubusercontent.com</div>
+<div class="line">185.199.108.154</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> dig +short AAAA pkg-containers.githubusercontent.com</div>
+<div class="line">2606:50c0:8000::154</div>
+<div class="line"> </div>
+<div class="line c"># rung 2 · port, IPv6 vs. IPv4</div>
+<div class="line"><span class="p">$</span> nc -6 -zv pkg-containers.githubusercontent.com 443</div>
+<div class="line">nc: connect to pkg-containers.githubusercontent.com port 443 (tcp) failed: Network is unreachable</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> nc -4 -zv pkg-containers.githubusercontent.com 443</div>
+<div class="line">Connection to pkg-containers.githubusercontent.com (185.199.108.154) 443 port [tcp/https] succeeded!</div>
+<div class="line"> </div>
+<div class="line c"># why v6 fails instantly:</div>
+<div class="line"><span class="p">$</span> ip -6 route</div>
+<div class="line">::1 dev lo proto kernel metric 256 pref medium</div>
+<div class="line c"># ✗ there's no IPv6 default route, only loopback. The v6 packets never leave the pod.</div>
+          </div>
+        </div>
+      </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>"Network unreachable" OR "network is unreachable"</code></div>
+    </div>
+  </section>
+
+  <!-- 12: Case 10 — TLS errors that aren't -->
+  <section class="slide">
+    <div class="eyebrow">12 · Case 10 · TLS?</div>
+    <h2>1.27 million TLS errors, and nothing is broken</h2>
+    <div class="meta"><span class="chip">kargo api · qa-green</span><span class="chip">cliquidator nginx · aws-dev</span><span class="chip rung">rung 3 · handshake (supposedly)</span></div>
+    <div class="body">
+      <div class="term wrap">
+<div class="line comment"># A: kargo, ~1.27M this week, almost exactly equal counts from each of 7 node IPs</div>
+<div class="line out">http: <span class="err">TLS handshake error</span> from 10.101.x.x:…: EOF</div>
+<div class="line comment"># B: nginx, ~200 over 48 minutes, one client</div>
+<div class="line out">SSL_do_handshake() failed (SSL routines::<span class="err">no shared cipher</span>) while SSL handshaking, client: 192.168.34.x, server: 0.0.0.0:443</div>
+<div class="line out">peer closed connection in SSL handshake (104: Connection reset by peer)</div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">These are the two biggest sources of "TLS errors" in our logs this week. Neither one is a cert problem. What are they?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer"><b>Ask who the client is before you debug the server.</b>
+          <ul style="margin:8px 0 0; padding-left:20px;">
+            <li><b>A</b>: EOF means the client opened TCP and hung up before sending a ClientHello. Every node IP, at the same steady rate, is the signature of a <b>TCP health check</b> (a load balancer or kube-proxy probe) hitting an HTTPS port. The connection is the whole check. It's harmless, just noisy.</li>
+            <li><b>B</b>: The access log shows that client's user agent: <code>Tenable … Security</code>. It's a <b>vulnerability scanner</b> deliberately offering weak ciphers to confirm the server refuses them. "No shared cipher" is the server passing the test.</li>
+          </ul></div>
+      </div>
+      <div class="egg"><div class="egg-label">🥚 Easter egg</div>One real TLS finding did turn up this week: <code>Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure</code>, from a staging service. That's the process-wide hammer from <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tls-deck.html" target="_blank" rel="noopener">TLS in Depth</a>'s Node.js slide, live in our logs. The scoped fix is still <code>NODE_EXTRA_CA_CERTS</code>.</div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># A · reproduce it: a TCP-only check against an HTTPS port</div>
+<div class="line"><span class="p">$</span> nc -zv kargo-api.kargo.svc.cluster.local 443</div>
+<div class="line">Connection to kargo-api.kargo.svc.cluster.local 443 port [tcp/https] succeeded!</div>
+<div class="line c"># server log, a moment later:   http: TLS handshake error from 10.101.x.x:51432: EOF   ← that was us</div>
+<div class="line"> </div>
+<div class="line c"># rung 3 · TLS: a real handshake to the same port is fine</div>
+<div class="line"><span class="p">$</span> openssl s_client -connect kargo-api.kargo.svc.cluster.local:443 -brief &lt;/dev/null</div>
+<div class="line">CONNECTION ESTABLISHED</div>
+<div class="line">Protocol version: TLSv1.3</div>
+<div class="line">Ciphersuite: TLS_AES_128_GCM_SHA256</div>
+<div class="line"> </div>
+<div class="line c"># B · reproduce it: offer only a weak cipher, the way the scanner does</div>
+<div class="line"><span class="p">$</span> openssl s_client -connect cliq-dev-nginx:443 -tls1_2 -cipher AES128-SHA &lt;/dev/null</div>
+<div class="line">40C7E1F2B07F0000:error:0A000410:SSL routines:ssl3_read_bytes:sslv3 alert handshake failure:../ssl/record/rec_layer_s3.c:1586:SSL alert number 40</div>
+<div class="line"> </div>
+<div class="line c"># rung 3 · TLS, with default ciphers</div>
+<div class="line"><span class="p">$</span> openssl s_client -connect cliq-dev-nginx:443 -brief &lt;/dev/null</div>
+<div class="line">CONNECTION ESTABLISHED</div>
+<div class="line">Protocol version: TLSv1.3</div>
+<div class="line c"># ✓ the server refuses weak ciphers and negotiates modern ones. Both behaviors are correct.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13: Case 11 — Cloudflare codes -->
+  <section class="slide">
+    <div class="eyebrow">13 · Case 11 · Reading someone else's errors</div>
+    <h2>Cloudflare already did the decoding for you</h2>
+    <p class="sub">When Cloudflare can't get an answer from our origin, it says which rung failed in the status code itself. The counts are from this week, almost all in staging.</p>
+    <div class="body">
+      <table class="records">
+        <tr><th>Code</th><th>Rung</th><th>Meaning</th><th>This week</th></tr>
+        <tr><td>530</td><td class="prose">1 · name</td><td class="prose">origin DNS or tunnel failure — Cloudflare couldn't find where to send it</td><td>~2.0k</td></tr>
+        <tr><td>521</td><td class="prose">2 · port, refused</td><td class="prose">origin actively refused the connection</td><td>~2.0k</td></tr>
+        <tr><td>522</td><td class="prose">2 · port, silence</td><td class="prose">TCP connect to origin timed out</td><td>~35.7k</td></tr>
+        <tr><td>524</td><td class="prose">4 · app</td><td class="prose">connected, but origin took too long to respond</td><td>small</td></tr>
+        <tr><td>520</td><td class="prose">4 · app</td><td class="prose">origin returned something empty or unexpected</td><td>—</td></tr>
+      </table>
+      <div class="ask">
+        <div class="q-label">Ask the room</div>
+        <div class="q-text">35,700 connect timeouts (522) to staging hostnames like <code>dev-v2.</code>, <code>dashboard.</code>, and <code>www.cliquidator.info</code>, each getting about 500 hits from about 350 user agents. Is staging on fire?</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal answer</button>
+        <div class="answer">No. Those are <b>abandoned DNS records</b> for dev environments that no longer exist, and they're being hit by uptime bots and scanners (MonsidoUptime and friends), not people. The 530s on <code>es-aws.</code> and <code>redis-aws.</code> are the same story one rung up. The real fix is cleaning up DNS, and that's more than housekeeping. A dangling record that points at an address or service we no longer control is how <b>subdomain takeovers</b> happen.</div>
+      </div>
+      <div class="cmds">
+        <button class="reveal-btn ghost" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal testing commands</button>
+        <div class="cmds-body">
+          <div class="cmds-note">Walking the ladder for this case · illustrative output</div>
+          <div class="blackterm">
+<div class="line c"># rung 4 · app, from outside: this only shows you Cloudflare's view</div>
+<div class="line"><span class="p">$</span> curl -sI https://dev-v2.cliquidator.info</div>
+<div class="line">HTTP/2 522</div>
+<div class="line">server: cloudflare</div>
+<div class="line"> </div>
+<div class="line c"># rung 1 · name: these are Cloudflare's proxy IPs, not the origin</div>
+<div class="line"><span class="p">$</span> dig +short dev-v2.cliquidator.info</div>
+<div class="line">104.21.x.x</div>
+<div class="line">172.67.x.x</div>
+<div class="line"> </div>
+<div class="line c"># the origin address comes from the record in the Cloudflare dashboard (here, a retired dev box)</div>
+<div class="line c"># rung 2 · port, at the origin itself</div>
+<div class="line"><span class="p">$</span> nc -zv -w 5 203.0.113.25 443</div>
+<div class="line">nc: connect to 203.0.113.25 port 443 (tcp) timed out: Operation now in progress</div>
+<div class="line c"># ✗ rung 2 times out at the origin, which matches 522. Nothing lives there now, so delete the record.</div>
+<div class="line"> </div>
+<div class="line"><span class="p">$</span> curl -sI https://es-aws.cliquidator.info | head -1</div>
+<div class="line">HTTP/2 530</div>
+<div class="line c"># 530 is the rung-1 version: Cloudflare couldn't resolve or tunnel to that origin at all</div>
+          </div>
+        </div>
+      </div>
+      <div class="dd"><span class="dd-label">Find it in Datadog</span><code>service:cloudflare @http.status_code:(520 OR 521 OR 522 OR 524 OR 530)</code>, grouped by status code and host</div>
+    </div>
+  </section>
+
+  <!-- 14: War stories -->
+  <section class="slide">
+    <div class="eyebrow">14 · Lightning round</div>
+    <h2>War stories: the symptom said one layer</h2>
+    <p class="sub">Real incidents from the last six months. Guess the rung from the symptom, then reveal what it actually was.</p>
+    <div class="body story">
+      <div class="ask">
+        <div class="q-label">Symptom</div>
+        <div class="q-text">A service starts returning 504 Gateway Timeout. Nobody deployed it. It works in qa and staging.</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal</button>
+        <div class="answer"><b>Rung 1, then 2.</b> An env var still pointed at an old hostname on a nonstandard port. That name had since been moved, in DNS, to a different NLB, and the prod NLB had <b>no listener on that port</b>. qa and staging had been set up differently, which is why they worked. Unrelated changes to DNS and the load balancer, a config nobody touched, and a gateway reporting the result.</div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Symptom</div>
+        <div class="q-text">Customer-facing pages break right after a team deploys an unrelated internal tool to Kubernetes.</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal</button>
+        <div class="answer"><b>Rung 3, caused by a config change.</b> The new Ingress joined a <b>shared ALB ingress group</b> and brought an HTTP→HTTPS redirect rule with it. The redirect then failed TLS on a <b>hostname mismatch</b>. It was a Kubernetes manifest change, showing up as a certificate error on someone else's site.</div>
+      </div>
+      <div class="ask">
+        <div class="q-label">Symptom</div>
+        <div class="q-text">After rolling back one service, a different service that depends on it stops working entirely.</div>
+        <button class="reveal-btn" onclick="this.nextElementSibling.classList.toggle('shown')">Reveal</button>
+        <div class="answer"><b>Rung 1 or 2, caused by service discovery.</b> The dependent service was still configured with the in-cluster URL from the newer version. After the rollback, nothing was answering at that name. The name in the config is the name that gets used, the same lesson as Case 2.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15: Wrap-up -->
+  <section class="slide">
+    <div class="eyebrow">Wrap-up</div>
+    <h2>The field guide</h2>
+    <p class="sub">Lessons that showed up more than once this week. None of them needed a new tool, only a careful read of the error.</p>
+    <div class="body">
+      <div class="row">
+        <div class="col panel"><div class="panel-title">The name in the error is the one the code used</div>Deleted databases, usernames passed to DNS, stale service URLs. Read the name before blaming the resolver.</div>
+        <div class="col panel"><div class="panel-title">The words after the comma matter most</div>Refused vs. timed out vs. unreachable. "While connecting" vs. "while reading." ENOTFOUND vs. EAI_AGAIN.</div>
+      </div>
+      <div class="row">
+        <div class="col panel"><div class="panel-title">Who said it, and who is the client?</div>Proxies report on what's behind them. Health checks and scanners make most of the TLS noise.</div>
+        <div class="col panel"><div class="panel-title">Time and blast radius</div>Many services failing together means a shared dependency. Find the first error in the window, not the loudest. Timeouts and retries have to nest.</div>
+      </div>
+      <div class="callout"><b>Try it yourself:</b> every case slide has a Datadog query at the bottom. Run one against this week, pick a pattern nobody's looked at, and work it through the four questions.</div>
+      <div class="callout"><b>Check out the others in this series:</b>
+        <ul style="margin:8px 0 0; padding-left:20px;">
+          <li><a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/dns-deck.html" target="_blank" rel="noopener">DNS in Depth: Simple Until It Isn't</a></li>
+          <li><a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tls-deck.html" target="_blank" rel="noopener">TLS in Depth: Trusted Until It Isn't</a></li>
+          <li><a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tcp-deck.html" target="_blank" rel="noopener">Connectivity in Depth: It's Not Always DNS</a></li>
+        </ul>
+      </div>
+      <div class="callout" style="display:flex; align-items:center; gap:16px;">
+        <img src="assets/qr-code.png" alt="QR code linking to the full series" style="width:84px; height:84px; border-radius:6px; flex-shrink:0; background:#fff; padding:6px;">
+        <div><b>All four talks, one link:</b><br><a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/" target="_blank" rel="noopener">ksuquix.github.io/pw-techweek-2006-talks</a></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="navbar">
+    <button class="navbtn" id="prevBtn" onclick="go(-1)">← Prev</button>
+    <div class="dots" id="dots"></div>
+    <img class="navbar-logo" src="assets/pw-logo.png" alt="Purple Wave">
+    <span class="counter" id="counter"></span>
+    <button class="navbtn" id="nextBtn" onclick="go(1)">Next →</button>
+  </div>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+let idx = 0;
+const dotsEl = document.getElementById('dots');
+slides.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.onclick = () => { idx = i; render(); };
+  dotsEl.appendChild(d);
+});
+function render(){
+  slides.forEach((s,i) => s.classList.toggle('active', i === idx));
+  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i === idx));
+  document.getElementById('counter').textContent = (idx+1) + ' / ' + slides.length;
+  document.getElementById('prevBtn').disabled = idx === 0;
+  document.getElementById('nextBtn').disabled = idx === slides.length - 1;
+}
+function go(delta){
+  idx = Math.min(slides.length - 1, Math.max(0, idx + delta));
+  render();
+}
+function goTo(i){
+  idx = Math.min(slides.length - 1, Math.max(0, i));
+  render();
+}
+// Reveals the next hidden clue in this .steps block; disables itself after the last one.
+function nextClue(btn){
+  const next = btn.parentElement.querySelector('.step:not(.shown)');
+  if (next) next.classList.add('shown');
+  if (!btn.parentElement.querySelector('.step:not(.shown)')){
+    btn.disabled = true;
+    btn.textContent = 'All clues shown';
+  }
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') go(1);
+  if (e.key === 'ArrowLeft') go(-1);
+});
+render();
+</script>
