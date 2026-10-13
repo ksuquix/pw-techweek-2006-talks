@@ -555,7 +555,7 @@ IDs are deliberately left off the slides.
 - Real DB usernames are replaced with `app_srv_worker` / `app_srv_…`.
 - Some host octets are masked (`10.101.x.x`, `192.168.34.x`). Others are kept on purpose
   because the lesson depends on them: `192.168.20.191` (the same IP across Case 4's lines),
-  `10.0.0.88` and the `10.101` vs. `10.0` ranges (QA vs. prod in Case 7), and `172.20.0.10`
+  `10.0.0.88` and the `10.101` vs. `10.0` ranges (QA vs. prod in Case 8), and `172.20.0.10`
   (kube-dns).
 - Dropped entirely: Cloudflare dev hostnames containing people's names, the
   a prod master-DB hostname / credentials-change example, and incident numbers.
@@ -605,23 +605,25 @@ Identical tokens, fonts, and base components to the other decks (CSS copied from
 7. **Case 5, one morning top to bottom** (steps + egg): `Too many connections` (app), then
    refused/timeouts (port), then recovery, then `Access denied` (grants). The egg covers the
    645k/hour retry storm with no backoff.
-8. **Case 6, idle-connection resets** (ask + callout): Go MySQL `broken pipe` / `closing bad idle
+8. **Case 6, TLS errors that aren't** (ask + egg): kargo `TLS handshake error … EOF` evenly from
+   every node (a TCP health check), and a Tenable scanner's `no shared cipher`. The egg is a real
+   `NODE_TLS_REJECT_UNAUTHORIZED=0` warning, linked to the TLS deck.
+   Moved up from slide 12 so a short-on-time run (stop with ~15 min left, press **W**) still
+   covers it; only IPv6 and Cloudflare sit after it.
+9. **Case 7, idle-connection resets** (ask + callout): Go MySQL `broken pipe` / `closing bad idle
    connection`, Sequelize `read ECONNRESET`. The callout is the Tableau/MariaDB `wait_timeout` +
    ALB idle-timeout story the user worked that same week ("every hop's idle timeout outlasts the
    hop in front of it").
-9. **Case 7, two nginx timeouts** (ask + egg): "while connecting" (QA → prod address, the SG doing
-   its job, a config bug) vs. "while reading response header" (slow app). The egg covers
-   `prematurely closed` and `no live upstreams`.
-10. **Case 8, the 502 that was a deploy** (steps): unix-socket errno sequence 2 → 111 → 13 during
+10. **Case 8, two nginx timeouts** (ask + egg): "while connecting" (QA → prod address, the SG doing
+    its job, a config bug) vs. "while reading response header" (slow app). The egg covers
+    `prematurely closed` and `no live upstreams`.
+11. **Case 9, the 502 that was a deploy** (steps): unix-socket errno sequence 2 → 111 → 13 during
     a release-automation run. "The access log says that it broke. The error log says why."
-11. **Case 9, IPv6** (steps): `(101: Network unreachable)` to Cloudflare/GitHub AAAA addresses,
+12. **Case 10, IPv6** (steps): `(101: Network unreachable)` to Cloudflare/GitHub AAAA addresses,
     with nginx falling back to v4
-12. **Case 10, TLS errors that aren't** (ask + egg): kargo `TLS handshake error … EOF` evenly from
-    every node (a TCP health check), and a Tenable scanner's `no shared cipher`. The egg is a real
-    `NODE_TLS_REJECT_UNAUTHORIZED=0` warning, linked to the TLS deck.
 13. **Case 11, Cloudflare codes** (table + ask): 530/521/522/524/520 mapped to rungs. The 35.7k 522s
     come from abandoned staging DNS records probed by bots, with a subdomain-takeover angle.
-14. **War stories**: three cards, each symptom → "Reveal testing commands" → answer reveal. The
+14. **War stories** (`id="war-stories"`, reachable from anywhere with the **W** key): three cards, each symptom → "Reveal testing commands" → answer reveal. The
     command boxes here are deliberately bare, commands and output only, with no `# ✓`/`# ✗` or
     rung comments, so the room reads the output and names the rung before the answer is shown.
 15. **Wrap-up, the field guide**: four lessons, a "try it yourself" callout, links to the other
@@ -633,6 +635,11 @@ Same 55-minute target. Seven slides carry an ask-the-room, four carry step-throu
 the war-stories slide has three cards (symptom → commands → answer). Since the "Reveal testing
 commands" boxes were added to every case, the estimate is **~65–75 minutes if every box is walked
 line by line**, or **~55–60 if they're opened and skimmed in about 30 seconds each**. There's no
-rehearsal yet. Cut candidates if it runs long: Case 9 (IPv6) and Case 11 (Cloudflare) are the most
+rehearsal yet. Cut candidates if it runs long: Case 10 (IPv6) and Case 11 (Cloudflare) are the most
 self-contained, Case 5 can be narrated in one breath right after Case 4, and the war stories can
 drop to two cards.
+
+**Presenting plan (user's call):** run the cases in order until about 15 minutes remain, then press
+**W** to jump to the war stories (~6–8 min). The wrap-up takes ~2–3 min, which leaves ~5 for
+questions. Keep the cases most worth not losing early in the order. That's why the TLS case moved
+ahead of the idle-connection, nginx, deploy, IPv6, and Cloudflare cases.
