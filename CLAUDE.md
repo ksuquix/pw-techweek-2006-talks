@@ -1,12 +1,25 @@
 # Presentation Series — "In Depth"
 
-This project holds three companion click-through presentations built as Claude Artifacts,
-sharing one visual identity (see "Design system" below — all three decks use the identical CSS
+This project holds four companion click-through presentations built as Claude Artifacts,
+sharing one visual identity (see "Design system" below — all four decks use the identical CSS
 token set, fonts, and component classes) so they read as one series: **DNS in Depth** →
-**TLS in Depth** → **Connectivity in Depth**. Every inline reference one deck makes to another
-is a real hyperlink to that deck's artifact URL, and every deck's wrap-up slide lists the other
-two under a "Check out the others in this series" callout — keep both of those in sync whenever
-a deck's title, URL, or wrap-up slide changes. See each section below for the deck specific to it.
+**TLS in Depth** → **Connectivity in Depth** → **Connectivity Errors** (the applied finale).
+Every inline reference one deck makes to another is a real hyperlink to that deck's **GitHub
+Pages URL** (`https://ksuquix.github.io/pw-techweek-2006-talks/<file>.html`), not its claude.ai
+artifact URL. The artifact links are org-internal; github.io is what gets shared. Every deck's
+wrap-up slide lists the other three under a "Check out the others in this series" callout, plus
+a QR/link callout to the series landing page `https://ksuquix.github.io/pw-techweek-2006-talks/`.
+That page is `README.md` rendered by Pages, and its deck links are absolute github.io URLs too.
+Keep all of these in sync whenever a deck's title, file name, or wrap-up slide changes. See
+each section below for the deck specific to it.
+
+**Publishing is two steps.** (1) Republish the artifact. (2) Commit, and merge to `main`. GitHub
+Pages builds from `main` at the repo root (legacy Jekyll build), so github.io only changes once
+the change lands on `main`. Work on a branch and merge via PR, matching the repo history.
+
+**The repo is public** (GitHub Pages at ksuquix.github.io/pw-techweek-2006-talks). Anything
+pulled from Datadog or incidents must be sanitized before it lands in a deck — see the
+"Sanitization" note under Connectivity Errors.
 
 ---
 
@@ -441,7 +454,7 @@ a small legend for this in the diagram's upper-right corner.
    error point you toward the right layer; and a fifth bullet noting Claude itself is
    genuinely good at poking around and finding where things stop matching up, given access)
 10. **The debugging ladder** (wrap-up) — four rungs: does the name resolve (`dig`/`nslookup`,
-    linked to DNS in Depth), does the port accept a connection (`nc -zv`/`Test-NetConnection`),
+    linked to DNS in Depth), does the port accept a connection (or get packets at all) (`nc -zv`/`Test-NetConnection`),
     does the TLS handshake succeed (`openssl s_client`, linked to TLS in Depth), does the app
     actually respond (`curl` with the real request); callout that you can start anywhere on the
     ladder but let the errors/messages guide the next move; + a "Check out the others in this
@@ -500,3 +513,121 @@ from prose alone is the network-layout diagram's exact SVG coordinates (slide 2)
 shape from the description above (Internet/IGW column, wide public subnet with three
 side-by-side boxes, private subnet below, VPC B peered to the right, VPN client below with a
 tunnel line, AWS dotted boundary, upper-right legend) rather than trying to guess pixel values.
+
+---
+
+# Applied Presentation — "Connectivity Errors: Reading the Tea Leaves"
+
+## What this is
+
+The fourth deck and the applied finale of the series. It adds no new theory. It takes real,
+recurring network-flavored errors from PurpleWave's own Datadog and works each one as a case,
+using the Connectivity deck's debugging ladder (name → port → TLS → app) as the spine. This is
+the "lab-style summary" the user planned after the three in-depth decks proved too dense to
+practice with.
+
+- **Source file**: `/home/ksuquix/scratch/techweek/practice-deck.html`
+- **Published artifact URL**: https://claude.ai/artifact/PwDTWaadB2URBKtvZizVgw
+- **Title**: "Connectivity Errors: Reading the Tea Leaves"
+- **Icon**: `search` (distinct from the other three)
+
+To update: edit the HTML file directly, then republish via the `Artifact` tool passing this
+file's `url`, plus `files` mapping `assets/pw-logo.png` and `assets/qr-code.png` to their local
+paths (the page references them relatively).
+
+**No Tech Week branding on this deck.** Tech Week 2026 is over, so unlike the other three this
+deck has no "Tech Week 2026" eyebrow and no Racing to Excellence badge on the title slide. It
+still uses the same colors, the pw navbar logo, the series links, and the QR code.
+
+## Data source
+
+Every case comes from Datadog logs for **2026-10-05 → 10-12**. Hot-index retention is only
+about 7 days, so these exact logs will age out. The Datadog queries printed on each slide still
+work against whatever the current week holds, but counts and timestamps quoted on slides won't
+reproduce after mid-October 2026. The war-stories slide draws on Datadog incidents from roughly
+April to October 2026 (an NLB missing a listener, behind a 504; an Ingress joining a shared ALB
+group, leading to a TLS hostname mismatch; a rollback leaving a stale in-cluster URL). Incident
+IDs are deliberately left off the slides.
+
+## Sanitization (public repo)
+
+- RDS cluster identifiers are masked (`pw-production-us-east-1d.xxxxxxxxxxxx…`).
+- Real DB usernames are replaced with `app_srv_worker` / `app_srv_…`.
+- Some host octets are masked (`10.101.x.x`, `192.168.34.x`). Others are kept on purpose
+  because the lesson depends on them: `192.168.20.191` (the same IP across Case 4's lines),
+  `10.0.0.88` and the `10.101` vs. `10.0` ranges (QA vs. prod in Case 7), and `172.20.0.10`
+  (kube-dns).
+- Dropped entirely: Cloudflare dev hostnames containing people's names, the
+  a prod master-DB hostname / credentials-change example, and incident numbers.
+
+## Design system
+
+Identical tokens, fonts, and base components to the other decks (CSS copied from
+`tcp-deck.html`, minus the unused `.topo`/`.vpcbox` classes). New components specific to this deck:
+- `.meta` + `.chip` / `.chip.rung` — the service · env · volume strip under each case title
+- `.steps` / `.step` / `.step.verdict` + a `.clue-btn` calling `nextClue(this)`. This is
+  progressive "Next clue →" disclosure: each click reveals one more step, and the last step is
+  the green verdict. It's the second interactive pattern next to `.ask`, and uses the same amber
+  `.reveal-btn` styling.
+- `.term.wrap`: wrapping, **monospace** log blocks. The other decks' `.term` blocks render in
+  Plex Sans, so this deck's are deliberately different.
+- `.dd` — "Find it in Datadog" query footer on each case slide
+- `.cmds` / `.cmds-body` + `.blackterm`: a "Reveal testing commands" toggle on every case slide
+  (an outlined `.reveal-btn.ghost`, so it reads as secondary to the ask/clue buttons). It opens a
+  fixed black-background, white-text terminal that walks the ladder for that case: `dig` for
+  rung 1, `nc` for rung 2, `openssl s_client` for rung 3, and `curl` for rung 4 (a DB client
+  stands in for curl on database cases). Each walk stops at the rung that fails, with
+  `# ✓` / `# ✗` comment lines. **The output is illustrative, not captured**, and every box is
+  labeled that way. The source for these blocks was a small line-based script (`$ ` = command,
+  `# ` = comment, anything else = output); edit the HTML directly now.
+- `.table-scroll`, `a.xref`, and a ≤640px media query that hides the navbar dots (16 dots
+  overflow on phones)
+
+## Slide order (16 total)
+
+0. **Title**: eyebrow is just "Don Eisele, Platform Engineering" (no Tech Week label or badge),
+   topic chips (`goTo(i)`), and the same presenter-bio callout
+1. **How to work a case**: rung 2 is worded "port accepts a connection (or gets packets at all)?"
+   to match the Connectivity deck's ladder. Four questions (exact words / who said it / which rung / when and how
+   wide), plus the ladder as a `.path`. The egg covers the 7-day retention: "this is a normal week."
+2. **The decoder**: table mapping each rung/failure to its Node / Go / nginx(errno) wording, plus
+   a warning callout that Go's `i/o timeout` appears on both the DNS rung and the TCP rung
+3. **Case 1, "Database issue"** (steps; the title is deliberately generic so the verdict reveals "the database isn't there"): `ENOTFOUND` on an RDS endpoint from a health-check
+   Lambda, about 8,640/day at a flat rate. Verdict: the resource is gone, not DNS.
+4. **Case 2, not a hostname** (ask): `ENOTFOUND app_srv_worker` / `ENOTFOUND amqp`. The cause is
+   a mis-parsed connection string (unencoded `@#/` in the password, an unset env var, or a URL
+   passed into a host field).
+5. **Case 3, eight services, one problem** (ask + egg): the qa-green kube-dns blip on 2026-10-09
+   22:14–22:50, `EAI_AGAIN` vs. `ENOTFOUND`. CoreDNS starvation is a hypothesis only. The egg
+   notes that CoreDNS logs aren't in Datadog.
+6. **Case 4, refused vs. timed out** (ask): the qa-db 192.168.20.191 outage on 2026-10-10, across
+   MySQL/Redis/RabbitMQ/NATS in Node, Go, and MariaDB wordings
+7. **Case 5, one morning top to bottom** (steps + egg): `Too many connections` (app), then
+   refused/timeouts (port), then recovery, then `Access denied` (grants). The egg covers the
+   645k/hour retry storm with no backoff.
+8. **Case 6, idle-connection resets** (ask + callout): Go MySQL `broken pipe` / `closing bad idle
+   connection`, Sequelize `read ECONNRESET`. The callout is the Tableau/MariaDB `wait_timeout` +
+   ALB idle-timeout story the user worked that same week ("every hop's idle timeout outlasts the
+   hop in front of it").
+9. **Case 7, two nginx timeouts** (ask + egg): "while connecting" (QA → prod address, the SG doing
+   its job, a config bug) vs. "while reading response header" (slow app). The egg covers
+   `prematurely closed` and `no live upstreams`.
+10. **Case 8, the 502 that was a deploy** (steps): unix-socket errno sequence 2 → 111 → 13 during
+    a release-automation run. "The access log says that it broke. The error log says why."
+11. **Case 9, IPv6** (steps): `(101: Network unreachable)` to Cloudflare/GitHub AAAA addresses,
+    with nginx falling back to v4
+12. **Case 10, TLS errors that aren't** (ask + egg): kargo `TLS handshake error … EOF` evenly from
+    every node (a TCP health check), and a Tenable scanner's `no shared cipher`. The egg is a real
+    `NODE_TLS_REJECT_UNAUTHORIZED=0` warning, linked to the TLS deck.
+13. **Case 11, Cloudflare codes** (table + ask): 530/521/522/524/520 mapped to rungs. The 35.7k 522s
+    come from abandoned staging DNS records probed by bots, with a subdomain-takeover angle.
+14. **War stories** (three symptom → reveal cards)
+15. **Wrap-up, the field guide**: four lessons, a "try it yourself" callout, links to the other
+    three decks, and the QR code ("All four talks")
+
+## Time budget
+
+Same 55-minute target. Seven slides carry an ask-the-room, four carry step-through clues, and
+the war-stories slide has three quick reveals. The rough estimate is **~55–65 minutes**, with no
+rehearsal yet. Cut candidates if it runs long: Case 9 (IPv6) and Case 11 (Cloudflare) are the
+most self-contained, and Case 5 can be narrated in one breath right after Case 4.
