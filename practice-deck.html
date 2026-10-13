@@ -261,20 +261,21 @@ table.records td code{font-size:0.86rem;}
     <hr class="title-rule">
     <div class="title-list">
       <button type="button" onclick="goTo(1)">how to work a case</button>
-      <button type="button" onclick="goTo(2)">error decoder</button>
-      <button type="button" onclick="goTo(3)">database issue</button>
-      <button type="button" onclick="goTo(4)">not a hostname</button>
-      <button type="button" onclick="goTo(5)">eight services, one problem</button>
-      <button type="button" onclick="goTo(6)">refused vs. timed out</button>
-      <button type="button" onclick="goTo(7)">a whole morning</button>
-      <button type="button" onclick="goTo(8)">TLS errors that aren't</button>
-      <button type="button" onclick="goTo(9)">idle connections</button>
-      <button type="button" onclick="goTo(10)">two nginx timeouts</button>
-      <button type="button" onclick="goTo(11)">the 502 that was a deploy</button>
-      <button type="button" onclick="goTo(12)">IPv6</button>
-      <button type="button" onclick="goTo(13)">Cloudflare codes</button>
-      <button type="button" onclick="goTo(14)">war stories</button>
-      <button type="button" onclick="goTo(15)">field guide</button>
+      <button type="button" onclick="goTo(2)">debugging ladder</button>
+      <button type="button" onclick="goTo(3)">error decoder</button>
+      <button type="button" onclick="goTo(4)">database issue</button>
+      <button type="button" onclick="goTo(5)">not a hostname</button>
+      <button type="button" onclick="goTo(6)">eight services, one problem</button>
+      <button type="button" onclick="goTo(7)">refused vs. timed out</button>
+      <button type="button" onclick="goTo(8)">a whole morning</button>
+      <button type="button" onclick="goTo(9)">TLS errors that aren't</button>
+      <button type="button" onclick="goTo(10)">idle connections</button>
+      <button type="button" onclick="goTo(11)">two nginx timeouts</button>
+      <button type="button" onclick="goTo(12)">the 502 that was a deploy</button>
+      <button type="button" onclick="goTo(13)">IPv6</button>
+      <button type="button" onclick="goTo(14)">Cloudflare codes</button>
+      <button type="button" onclick="goTo(15)">war stories</button>
+      <button type="button" onclick="goTo(16)">field guide</button>
     </div>
     <div class="callout" style="margin-top:auto;">
       <b>Don Eisele</b> — Platform Engineering, Operations Team, since January 2026. Previously
@@ -295,7 +296,7 @@ table.records td code{font-size:0.86rem;}
         <div class="col panel"><div class="panel-title">2. Who said it?</div>The client library, a proxy (nginx, APISIX, Cloudflare), a load balancer, or the app itself? A 502 is a proxy talking <i>about</i> something behind it.</div>
       </div>
       <div class="row">
-        <div class="col panel"><div class="panel-title">3. Which rung of the ladder?</div>Name, port, handshake, or app. The wording almost always tells you, once you know the decoder (next slide).</div>
+        <div class="col panel"><div class="panel-title">3. Which rung of the ladder?</div>Name, port, handshake, or app. The wording almost always tells you, once you know the decoder (two slides on).</div>
         <div class="col panel"><div class="panel-title">4. When, and how wide?</div>One service or thirty? One pod or every node? Starting at a deploy, or at a steady rate for weeks? Blast radius points at the shared dependency.</div>
       </div>
       <div class="path">
@@ -304,14 +305,33 @@ table.records td code{font-size:0.86rem;}
         <div class="node">3 · TLS handshakes?</div><span class="arrow">→</span>
         <div class="node hot">4 · app answers?</div>
       </div>
-      <div class="callout">That's the debugging ladder from <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tcp-deck.html" target="_blank" rel="noopener">Connectivity in Depth</a>. Once you've placed the error on a rung, test <b>that rung</b>, from <b>the same place</b> the error came from: the same pod, the same box, the same network path.</div>
+      <div class="callout">That's the debugging ladder from <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tcp-deck.html" target="_blank" rel="noopener">Connectivity in Depth</a>, in full on the next slide. Once you've placed the error on a rung, test <b>that rung</b>, from <b>the same place</b> the error came from: the same pod, the same box, the same network path.</div>
       <div class="egg"><div class="egg-label">🥚 Easter egg</div>Datadog keeps about <b>7 days</b> of logs searchable, so every case here is from the week of October 5–12, 2026. Nothing was cherry-picked from years of history. This is what a normal week looks like.</div>
     </div>
   </section>
 
-  <!-- 2: decoder -->
-  <section class="slide">
+  <!-- 2: debugging ladder -->
+  <section class="slide" id="ladder">
     <div class="eyebrow">02 · Reference</div>
+    <h2>The debugging ladder</h2>
+    <p class="sub">From <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tcp-deck.html" target="_blank" rel="noopener">Connectivity in Depth</a>. Isolate which layer is actually failing before assuming the whole network is broken. Each rung has its own tool.</p>
+    <div class="body">
+      <div class="row">
+        <div class="col panel"><div class="panel-title">1. Does the name resolve?</div><code>dig</code> / <code>nslookup</code> — <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/dns-deck.html" target="_blank" rel="noopener">DNS in Depth</a> territory.</div>
+        <div class="col panel"><div class="panel-title">2. Does the port accept a connection (or get packets at all)?</div><code>nc -zv</code> / <code>Test-NetConnection</code> — plain TCP, no app layer at all.</div>
+      </div>
+      <div class="row">
+        <div class="col panel"><div class="panel-title">3. Does the TLS handshake succeed?</div><code>openssl s_client</code> — <a class="xref" href="https://ksuquix.github.io/pw-techweek-2006-talks/tls-deck.html" target="_blank" rel="noopener">TLS in Depth</a> territory.</div>
+        <div class="col panel"><div class="panel-title">4. Does the application actually respond?</div><code>curl</code> with the real request — the first layer where app logic, not networking, can be the cause.</div>
+      </div>
+      <div class="callout">You can usually start anywhere on the ladder, but let the errors and messages you get point you toward the next place to look.</div>
+      <div class="egg"><div class="egg-label">Presenter shortcut</div>Press <kbd>L</kbd> on any slide to pop over to this ladder, then <kbd>L</kbd> again to jump back to where you were.</div>
+    </div>
+  </section>
+
+  <!-- 3: decoder -->
+  <section class="slide">
+    <div class="eyebrow">03 · Reference</div>
     <h2>The decoder: same failure, three dialects</h2>
     <p class="sub">Node, Go, and nginx describe identical failures in different words. Learn to see the failure through the dialect.</p>
     <div class="body">
@@ -332,9 +352,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 3: Case 1 — deleted RDS -->
+  <!-- 4: Case 1 — deleted RDS -->
   <section class="slide">
-    <div class="eyebrow">03 · Case 1 · DNS</div>
+    <div class="eyebrow">04 · Case 1 · DNS</div>
     <h2>Database issue</h2>
     <div class="meta"><span class="chip">service: checkdatabase-east</span><span class="chip">AWS Lambda</span><span class="chip">~8,640 / day, every day</span><span class="chip rung">rung 1 · name</span></div>
     <div class="body">
@@ -373,9 +393,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 4: Case 2 — not a hostname -->
+  <!-- 5: Case 2 — not a hostname -->
   <section class="slide">
-    <div class="eyebrow">04 · Case 2 · DNS?</div>
+    <div class="eyebrow">05 · Case 2 · DNS?</div>
     <h2>"ENOTFOUND" for a name that was never a host</h2>
     <div class="meta"><span class="chip">geo-worker · prod EC2</span><span class="chip">rabbit consumer · prod</span><span class="chip">intermittent, ~110 hits</span></div>
     <div class="body">
@@ -427,9 +447,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 5: Case 3 — kube-dns blip -->
+  <!-- 6: Case 3 — kube-dns blip -->
   <section class="slide">
-    <div class="eyebrow">05 · Case 3 · DNS</div>
+    <div class="eyebrow">06 · Case 3 · DNS</div>
     <h2>Eight services, 36 minutes, one problem</h2>
     <div class="meta"><span class="chip">cluster: qa-green</span><span class="chip">2026-10-09 22:14–22:50 UTC</span><span class="chip">argocd, backstage, settlement, shipping, terms, cloudflared, …</span></div>
     <div class="body">
@@ -484,9 +504,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 6: Case 4 — refused vs timeout -->
+  <!-- 7: Case 4 — refused vs timeout -->
   <section class="slide">
-    <div class="eyebrow">06 · Case 4 · TCP</div>
+    <div class="eyebrow">07 · Case 4 · TCP</div>
     <h2>Refused and timed out, same box, same morning</h2>
     <div class="meta"><span class="chip">target: qa-db.cliquidator.info → 192.168.20.191</span><span class="chip">MySQL · Redis · RabbitMQ · NATS</span><span class="chip">~33 services in qa</span><span class="chip">2026-10-10</span></div>
     <div class="body">
@@ -535,9 +555,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 7: Case 5 — the whole morning on the ladder -->
+  <!-- 8: Case 5 — the whole morning on the ladder -->
   <section class="slide">
-    <div class="eyebrow">07 · Case 5 · Every rung</div>
+    <div class="eyebrow">08 · Case 5 · Every rung</div>
     <h2>One morning, read top to bottom</h2>
     <p class="sub">The same QA box from Case 4, before and after. The errors change rung as the situation changes, so the error wording works as a timeline.</p>
     <div class="body">
@@ -579,9 +599,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 8: Case 6 — TLS errors that aren't -->
+  <!-- 9: Case 6 — TLS errors that aren't -->
   <section class="slide">
-    <div class="eyebrow">08 · Case 6 · TLS?</div>
+    <div class="eyebrow">09 · Case 6 · TLS?</div>
     <h2>1.27 million TLS errors, and nothing is broken</h2>
     <div class="meta"><span class="chip">kargo api · qa-green</span><span class="chip">cliquidator nginx · aws-dev</span><span class="chip rung">rung 3 · handshake (supposedly)</span></div>
     <div class="body">
@@ -635,9 +655,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 9: Case 7 — idle connection resets -->
+  <!-- 10: Case 7 — idle connection resets -->
   <section class="slide">
-    <div class="eyebrow">09 · Case 7 · TCP</div>
+    <div class="eyebrow">10 · Case 7 · TCP</div>
     <h2>Broken pipe on the first query after a quiet spell</h2>
     <div class="meta"><span class="chip">service: authentication (Go)</span><span class="chip">pods 10.102.x → DB in legacy VPC 10.0.x</span><span class="chip">~2k pairs in production</span></div>
     <div class="body">
@@ -687,9 +707,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 10: Case 8 — two nginx timeouts -->
+  <!-- 11: Case 8 — two nginx timeouts -->
   <section class="slide">
-    <div class="eyebrow">10 · Case 8 · TCP vs. App</div>
+    <div class="eyebrow">11 · Case 8 · TCP vs. App</div>
     <h2>Two "upstream timed out" errors, two different rungs</h2>
     <div class="meta"><span class="chip">apisix-internal · qa</span><span class="chip">www / apisix-public · prod</span></div>
     <div class="body">
@@ -738,9 +758,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 11: Case 9 — 502 was a deploy -->
+  <!-- 12: Case 9 — 502 was a deploy -->
   <section class="slide">
-    <div class="eyebrow">11 · Case 9 · App behind a proxy</div>
+    <div class="eyebrow">12 · Case 9 · App behind a proxy</div>
     <h2>The 502 spike that was a deploy</h2>
     <div class="meta"><span class="chip">prod EC2 · release automation</span><span class="chip">2026-10-09 15:13–15:24 UTC</span><span class="chip">502s: ~1k/day → ~61k that day</span></div>
     <div class="body">
@@ -791,9 +811,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 12: Case 10 — IPv6 -->
+  <!-- 13: Case 10 — IPv6 -->
   <section class="slide">
-    <div class="eyebrow">12 · Case 10 · DNS meets routing</div>
+    <div class="eyebrow">13 · Case 10 · DNS meets routing</div>
     <h2>"Network unreachable" to a site that's up</h2>
     <div class="meta"><span class="chip">purplewave-public-proxy · staging</span><span class="chip">kargo · qa-green</span><span class="chip">steady, all week</span></div>
     <div class="body">
@@ -839,9 +859,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 13: Case 11 — Cloudflare codes -->
+  <!-- 14: Case 11 — Cloudflare codes -->
   <section class="slide">
-    <div class="eyebrow">13 · Case 11 · Reading someone else's errors</div>
+    <div class="eyebrow">14 · Case 11 · Reading someone else's errors</div>
     <h2>Cloudflare already did the decoding for you</h2>
     <p class="sub">When Cloudflare can't get an answer from our origin, it says which rung failed in the status code itself. The counts are from this week, almost all in staging.</p>
     <div class="body">
@@ -890,9 +910,9 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 14: War stories -->
+  <!-- 15: War stories -->
   <section class="slide" id="war-stories">
-    <div class="eyebrow">14 · Lightning round</div>
+    <div class="eyebrow">15 · Lightning round</div>
     <h2>War stories: the symptom said one layer</h2>
     <p class="sub">Real incidents from the last six months. Guess the rung from the symptom, then reveal what it actually was.</p>
     <div class="body story">
@@ -986,7 +1006,7 @@ table.records td code{font-size:0.86rem;}
     </div>
   </section>
 
-  <!-- 15: Wrap-up -->
+  <!-- 16: Wrap-up -->
   <section class="slide">
     <div class="eyebrow">Wrap-up</div>
     <h2>The field guide</h2>
@@ -1031,7 +1051,7 @@ const dotsEl = document.getElementById('dots');
 slides.forEach((_, i) => {
   const d = document.createElement('div');
   d.className = 'dot' + (i === 0 ? ' active' : '');
-  d.onclick = () => { idx = i; render(); };
+  d.onclick = () => { idx = i; ladderReturn = null; render(); };
   dotsEl.appendChild(d);
 });
 function render(){
@@ -1041,7 +1061,10 @@ function render(){
   document.getElementById('prevBtn').disabled = idx === 0;
   document.getElementById('nextBtn').disabled = idx === slides.length - 1;
 }
+// Slide to return to when L is pressed again on the ladder; any normal navigation clears it.
+let ladderReturn = null;
 function go(delta){
+  ladderReturn = null;
   idx = Math.min(slides.length - 1, Math.max(0, idx + delta));
   render();
 }
@@ -1064,6 +1087,12 @@ document.addEventListener('keydown', e => {
   // W jumps straight to the war stories (for when time is running short)
   if ((e.key === 'w' || e.key === 'W') && !e.ctrlKey && !e.metaKey && !e.altKey){
     goTo([...slides].indexOf(document.getElementById('war-stories')));
+  }
+  // L pops over to the debugging ladder, and L again returns to the slide you came from
+  if ((e.key === 'l' || e.key === 'L') && !e.ctrlKey && !e.metaKey && !e.altKey){
+    const ladder = [...slides].indexOf(document.getElementById('ladder'));
+    if (idx !== ladder){ const from = idx; goTo(ladder); ladderReturn = from; }
+    else if (ladderReturn !== null){ const back = ladderReturn; ladderReturn = null; goTo(back); }
   }
 });
 render();

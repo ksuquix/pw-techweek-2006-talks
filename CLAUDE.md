@@ -583,50 +583,54 @@ Identical tokens, fonts, and base components to the other decks (CSS copied from
 - `.table-scroll`, `a.xref`, and a ≤640px media query that hides the navbar dots (16 dots
   overflow on phones)
 
-## Slide order (16 total)
+## Slide order (17 total)
 
 0. **Title**: eyebrow is just "Don Eisele, Platform Engineering" (no Tech Week label or badge),
    topic chips (`goTo(i)`), and the same presenter-bio callout
 1. **How to work a case**: rung 2 is worded "port accepts a connection (or gets packets at all)?"
    to match the Connectivity deck's ladder. Four questions (exact words / who said it / which rung / when and how
    wide), plus the ladder as a `.path`. The egg covers the 7-day retention: "this is a normal week."
-2. **The decoder**: table mapping each rung/failure to its Node / Go / nginx(errno) wording, plus
+2. **The debugging ladder** (`id="ladder"`): the four rungs from Connectivity in Depth's wrap-up
+   (dig / nc / openssl s_client / curl, rung 2 worded "or get packets at all"), with links to the
+   other three decks. A presenter egg notes the **L** toggle: press L anywhere to jump here, and L
+   again to return to the slide you came from. Arrow-key or dot navigation clears the return point.
+3. **The decoder**: table mapping each rung/failure to its Node / Go / nginx(errno) wording, plus
    a warning callout that Go's `i/o timeout` appears on both the DNS rung and the TCP rung
-3. **Case 1, "Database issue"** (steps; the title is deliberately generic so the verdict reveals "the database isn't there"): `ENOTFOUND` on an RDS endpoint from a health-check
+4. **Case 1, "Database issue"** (steps; the title is deliberately generic so the verdict reveals "the database isn't there"): `ENOTFOUND` on an RDS endpoint from a health-check
    Lambda, about 8,640/day at a flat rate. Verdict: the resource is gone, not DNS.
-4. **Case 2, not a hostname** (ask): `ENOTFOUND app_srv_worker` / `ENOTFOUND amqp`. The cause is
+5. **Case 2, not a hostname** (ask): `ENOTFOUND app_srv_worker` / `ENOTFOUND amqp`. The cause is
    a mis-parsed connection string (unencoded `@#/` in the password, an unset env var, or a URL
    passed into a host field).
-5. **Case 3, eight services, one problem** (ask + egg): the qa-green kube-dns blip on 2026-10-09
+6. **Case 3, eight services, one problem** (ask + egg): the qa-green kube-dns blip on 2026-10-09
    22:14–22:50, `EAI_AGAIN` vs. `ENOTFOUND`. CoreDNS starvation is a hypothesis only. The egg
    notes that CoreDNS logs aren't in Datadog.
-6. **Case 4, refused vs. timed out** (ask): the qa-db 192.168.20.191 outage on 2026-10-10, across
+7. **Case 4, refused vs. timed out** (ask): the qa-db 192.168.20.191 outage on 2026-10-10, across
    MySQL/Redis/RabbitMQ/NATS in Node, Go, and MariaDB wordings
-7. **Case 5, one morning top to bottom** (steps + egg): `Too many connections` (app), then
+8. **Case 5, one morning top to bottom** (steps + egg): `Too many connections` (app), then
    refused/timeouts (port), then recovery, then `Access denied` (grants). The egg covers the
    645k/hour retry storm with no backoff.
-8. **Case 6, TLS errors that aren't** (ask + egg): kargo `TLS handshake error … EOF` evenly from
+9. **Case 6, TLS errors that aren't** (ask + egg): kargo `TLS handshake error … EOF` evenly from
    every node (a TCP health check), and a Tenable scanner's `no shared cipher`. The egg is a real
    `NODE_TLS_REJECT_UNAUTHORIZED=0` warning, linked to the TLS deck.
-   Moved up from slide 12 so a short-on-time run (stop with ~15 min left, press **W**) still
+   Moved up from late in the deck so a short-on-time run (stop with ~15 min left, press **W**) still
    covers it; only IPv6 and Cloudflare sit after it.
-9. **Case 7, idle-connection resets** (ask + callout): Go MySQL `broken pipe` / `closing bad idle
+10. **Case 7, idle-connection resets** (ask + callout): Go MySQL `broken pipe` / `closing bad idle
    connection`, Sequelize `read ECONNRESET`. The callout is the Tableau/MariaDB `wait_timeout` +
    ALB idle-timeout story the user worked that same week ("every hop's idle timeout outlasts the
    hop in front of it").
-10. **Case 8, two nginx timeouts** (ask + egg): "while connecting" (QA → prod address, the SG doing
+11. **Case 8, two nginx timeouts** (ask + egg): "while connecting" (QA → prod address, the SG doing
     its job, a config bug) vs. "while reading response header" (slow app). The egg covers
     `prematurely closed` and `no live upstreams`.
-11. **Case 9, the 502 that was a deploy** (steps): unix-socket errno sequence 2 → 111 → 13 during
+12. **Case 9, the 502 that was a deploy** (steps): unix-socket errno sequence 2 → 111 → 13 during
     a release-automation run. "The access log says that it broke. The error log says why."
-12. **Case 10, IPv6** (steps): `(101: Network unreachable)` to Cloudflare/GitHub AAAA addresses,
+13. **Case 10, IPv6** (steps): `(101: Network unreachable)` to Cloudflare/GitHub AAAA addresses,
     with nginx falling back to v4
-13. **Case 11, Cloudflare codes** (table + ask): 530/521/522/524/520 mapped to rungs. The 35.7k 522s
+14. **Case 11, Cloudflare codes** (table + ask): 530/521/522/524/520 mapped to rungs. The 35.7k 522s
     come from abandoned staging DNS records probed by bots, with a subdomain-takeover angle.
-14. **War stories** (`id="war-stories"`, reachable from anywhere with the **W** key): three cards, each symptom → "Reveal testing commands" → answer reveal. The
+15. **War stories** (`id="war-stories"`, reachable from anywhere with the **W** key): three cards, each symptom → "Reveal testing commands" → answer reveal. The
     command boxes here are deliberately bare, commands and output only, with no `# ✓`/`# ✗` or
     rung comments, so the room reads the output and names the rung before the answer is shown.
-15. **Wrap-up, the field guide**: four lessons, a "try it yourself" callout, links to the other
+16. **Wrap-up, the field guide**: four lessons, a "try it yourself" callout, links to the other
     three decks, and the QR code ("All four talks")
 
 ## Time budget
